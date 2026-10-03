@@ -1062,10 +1062,7 @@ function Library.new()
 	end
 
 	local Ignored_Keys = {
-		Enum.KeyCode.LeftControl,
-		Enum.KeyCode.RightControl,
-		Enum.KeyCode.LeftAlt,
-		Enum.KeyCode.RightAlt,
+		-- Ctrl/Alt removed so they can be used as keybinds
 	}
 
 	-- NewBindField click: start waiting for a key
@@ -1962,12 +1959,15 @@ function Library.new()
 		{ Scale = 0 }
 	)
 
+	-- Show/Hide toggle key is configurable via Library.ToggleKey (set from v1.lua)
+	-- Defaults to RightAlt if not set
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then
 			return
 		end
 
-		if input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.RightAlt or input.KeyCode == Enum.KeyCode.LeftAlt then
+		local toggleKey = Library.ToggleKey or Enum.KeyCode.RightAlt
+		if input.KeyCode == toggleKey then
 			if Main_GUI.Enabled then
 				Tween_Out:Play()
 				Tween_Out.Completed:Wait()
