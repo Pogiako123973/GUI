@@ -416,7 +416,7 @@ function Library.new()
 	GUI["a"]["BackgroundTransparency"] = 1;
 	GUI["a"]["Size"] = UDim2.new(0, 90, 0, 13);
 	--GUI["a"]["Text"] = Player.DisplayName;
-	GUI["a"]["Text"] = 'Byteverserys'
+	GUI["a"]["Text"] = 'Lazyjovan3'
 	GUI["a"]["Name"] = [[Name]];
 	GUI["a"]["Position"] = UDim2.new(0, 57, 0, 0);
 	-- Attributes
