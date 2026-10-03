@@ -1963,11 +1963,11 @@ function Library.new()
 	)
 
 	-- Show/Hide toggle key is configurable via Library.ToggleKey (set from v1.lua)
-	-- Defaults to RightAlt if not set
+	-- Defaults to RightControl if not set
 	-- NOTE: No gpe guard here because modifier keys (Alt, Ctrl) are always
 	-- marked as gameProcessed by Roblox, and the UI toggle must work regardless.
 	UIS.InputBegan:Connect(function(input, gp)
-		local toggleKey = Library.ToggleKey or Enum.KeyCode.RightAlt
+		local toggleKey = Library.ToggleKey or Enum.KeyCode.RightControl
 		if input.KeyCode == toggleKey then
 			if Main_GUI.Enabled then
 				Tween_Out:Play()
