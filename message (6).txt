@@ -415,8 +415,7 @@ function Library.new()
 	GUI["a"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
 	GUI["a"]["BackgroundTransparency"] = 1;
 	GUI["a"]["Size"] = UDim2.new(0, 90, 0, 13);
-	--GUI["a"]["Text"] = Player.DisplayName;
-	GUI["a"]["Text"] = 'Lazyjovan3'
+	GUI["a"]["Text"] = Player.DisplayName;
 	GUI["a"]["Name"] = [[Name]];
 	GUI["a"]["Position"] = UDim2.new(0, 57, 0, 0);
 	-- Attributes
@@ -444,7 +443,7 @@ function Library.new()
 	GUI["c"] = Instance.new("ImageLabel", GUI["9"]);
 	GUI["c"]["BorderSizePixel"] = 0;
 	GUI["c"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
-	GUI["c"]["Image"] = [[rbxthumb://type=AvatarHeadShot&id=7329993111&w=48&h=48]];
+	GUI["c"]["Image"] = [[rbxthumb://type=AvatarHeadShot&id=]] .. tostring(Player.UserId) .. [[&w=48&h=48]];
 	GUI["c"]["Size"] = UDim2.new(0, 32, 0, 30);
 	GUI["c"]["BackgroundTransparency"] = 1;
 	GUI["c"]["Name"] = [[IMG_Avatar]];
