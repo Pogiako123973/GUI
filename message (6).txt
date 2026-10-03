@@ -1,0 +1,4600 @@
+local UI_Connections = {}
+local Is_Mobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+
+local GUI = {
+	CurrentTabs = {left = nil, right = nil},
+	Tabs = {},
+	ActiveKeybindToggle = nil,
+	WaitingForKey = false,
+	Widgets = {}
+}
+
+if not isfolder('Aries') then
+	makefolder('Aries')
+end
+
+if not isfolder("Aries/Presets") then
+	makefolder("Aries/Presets")
+end
+
+function Library:save_flags()
+	local flags = HttpService:JSONEncode(Library.Flags)
+
+	writefile('Aries/' .. game.GameId .. '.lua', flags)
+end
+
+function Library:load_flags()
+	if not isfile('Aries/' .. game.GameId .. '.lua') then
+		Library.save_flags()
+		return
+	end
+
+	local flags = readfile('Aries/' .. game.GameId .. '.lua')
+
+	if not flags then
+		Library.save_flags()
+		return
+	end
+
+	Library.Flags = HttpService:JSONDecode(flags)
+end
+
+Library.load_flags()
+
+function Library:save_preset(name, data)
+	local encoded = HttpService:JSONEncode(data)
+	writefile("Aries/Presets/" .. name .. ".json", encoded)
+end
+
+function Library:load_preset(name)
+	local path = "Aries/Presets/" .. name .. ".json"
+
+	if not isfile(path) then
+		return nil
+	end
+
+	local decoded = HttpService:JSONDecode(readfile(path))
+	return decoded
+end
+
+-- Auto-load of last preset on startup removed; presets are only displayed in the UI
+
+function Library:list_presets()
+	local files = listfiles("Aries/Presets")
+	local presets = {}
+
+	for _, file in files do
+		local presetName = file:match("Aries[/\\]Presets[/\\](.+)%.json")
+
+		if presetName then
+			table.insert(presets, presetName)
+		end
+	end
+
+	return presets
+end
+
+function Library:validate(defaults, options)
+	options = options or {}
+
+	for Index, Value in defaults do
+		if options[Index] == nil then
+			options[Index] = Value
+		end
+	end
+
+	return options
+end
+
+type Icon = {
+	Url: string,
+	Id: number,
+	IconName: string,
+	ImageRectOffset: Vector2,
+	ImageRectSize: Vector2,
+}
+
+type IconModule = {
+	Icons: { string },
+	GetAsset: (Name: string) -> Icon?,
+}
+
+local FetchIcons, Icons = pcall(function()
+	return (loadstring(
+		game:HttpGet("https://raw.githubusercontent.com/mstudio45/lucide-roblox-direct/refs/heads/main/source.lua")
+		) :: () -> IconModule)()
+end)
+
+local function IsCustomAssetIcon(Icon: string, IncludeAssetId: boolean)
+	return typeof(Icon) == "string" and (Icon:match("^content://") or Icon:match("^rbxasset://%x+/") or (IncludeAssetId == true and Icon:match("^rbxassetid://")))
+end
+
+function IsValidCustomIcon(Icon: string)
+	return typeof(Icon) == "string" and (Icon:match("^rbxasset://textures/") or Icon:match("roblox%.com/asset/%?id=") or Icon:match("rbxthumb://type="))
+end
+
+function Library:GetIcon(IconName: string)
+	if not FetchIcons or not Icons then
+		return
+	end
+
+	local Success, Icon = pcall(Icons.GetAsset, IconName)
+	if not Success then
+		return
+	end
+
+	return Icon
+end
+
+function Library:GetCustomIcon(IconName: string): any
+	if not IconName then
+		return nil
+	end
+
+	if tonumber(IconName) then
+		IconName = string.format("rbxassetid://%s", tostring(IconName))
+	end
+
+	if IsCustomAssetIcon(IconName, true) then
+		return {
+			Url = IconName,
+			ImageRectOffset = Vector2.zero,
+			ImageRectSize = Vector2.zero,
+		}
+	elseif IsValidCustomIcon(IconName) then
+		return {
+			Url = IconName,
+			ImageRectOffset = Vector2.zero,
+			ImageRectSize = Vector2.zero,
+			Custom = true,
+		}
+	end
+
+	local LucideIcon = Library:GetIcon(IconName)
+	if LucideIcon then
+		return LucideIcon
+	end
+
+	return nil
+end
+
+if Is_Mobile then
+	Library["1"] = Instance.new("ScreenGui", game:GetService('CoreGui'));
+	Library["1"]["Name"] = [[Mobile_Gui]];
+	Library["1"]["ZIndexBehavior"] = Enum.ZIndexBehavior.Sibling;
+
+	Library["2"] = Instance.new("TextButton", Library["1"]);
+	Library["2"]["BorderSizePixel"] = 0;
+	Library["2"]["Modal"] = false; -- set to true to break shiftlock
+	Library["2"]["AutoButtonColor"] = false;
+	Library["2"]["TextSize"] = 14;
+	Library["2"]["TextColor3"] = Color3.fromRGB(0, 0, 0);
+	Library["2"]["BackgroundColor3"] = Color3.fromRGB(28, 29, 34);
+	Library["2"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	Library["2"]["Size"] = UDim2.new(0, 122, 0, 38);
+	Library["2"]["Name"] = [[Mobile]];
+	Library["2"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Library["2"]["Text"] = [[]];
+	Library["2"]["Position"] = UDim2.new(0.021, -4, 0.918, -5);
+	Library.Dragging = true;
+
+	Library["3"] = Instance.new("UICorner", Library["2"]);
+	Library["3"]["CornerRadius"] = UDim.new(0, 13);
+
+	Library["4"] = Instance.new("ImageLabel", Library["2"]);
+	Library["4"]["ZIndex"] = 0;
+	Library["4"]["BorderSizePixel"] = 0;
+	Library["4"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	Library["4"]["ImageTransparency"] = 0.2;
+	Library["4"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
+	Library["4"]["Image"] = [[rbxassetid://17183270335]];
+	Library["4"]["Size"] = UDim2.new(0, 144, 0, 58);
+	Library["4"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Library["4"]["BackgroundTransparency"] = 1;
+	Library["4"]["Name"] = [[Shadow]];
+	Library["4"]["Position"] = UDim2.new(0.5, 0, 0.5, 0);
+
+	Library["5"] = Instance.new("ImageLabel", Library["2"]);
+	Library["5"]["BorderSizePixel"] = 0;
+	Library["5"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	Library["5"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
+	Library["5"]["Image"] = [[rbxassetid://10709810463]];
+	Library["5"]["Size"] = UDim2.new(0, 15, 0, 15);
+	Library["5"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Library["5"]["BackgroundTransparency"] = 1;
+	Library["5"]["Name"] = [[Icon]];
+	Library["5"]["Position"] = UDim2.new(0.5, 0, 0.5, 0);
+
+	getgenv().MobileDrag = getgenv().MobileDrag or {
+		Dragging = false,
+		DragStart = nil,
+		StartPosition = nil,
+		DragInput = nil
+	}
+
+	local Drag = getgenv().MobileDrag
+	local UIS = game:GetService("UserInputService")
+
+	Library["2"].InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1
+			or Input.UserInputType == Enum.UserInputType.Touch then
+
+			Drag.Dragging = true
+			Drag.DragStart = Input.Position
+			Drag.StartPosition = Library["2"].Position
+
+			Input.Changed:Connect(function()
+				if Input.UserInputState == Enum.UserInputState.End then
+					Drag.Dragging = false
+				end
+			end)
+		end
+	end)
+
+	Library["2"].InputChanged:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseMovement
+			or Input.UserInputType == Enum.UserInputType.Touch then
+			Drag.DragInput = Input
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(Input)
+		if Input == Drag.DragInput and Drag.Dragging then
+			local Delta = Input.Position - Drag.DragStart
+
+			Library["2"].Position = UDim2.new(
+				Drag.StartPosition.X.Scale,
+				Drag.StartPosition.X.Offset + Delta.X,
+				Drag.StartPosition.Y.Scale,
+				Drag.StartPosition.Y.Offset + Delta.Y
+			)
+		end
+	end)
+
+	local Tween_Time = 0.65
+
+	Library['2'].InputBegan:Connect(function(input, gpe)
+		if gpe then
+			return
+		end
+
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if GUI['1'].Enabled then
+				local Tween_Out = TweenService:Create(GUI["4"], TweenInfo.new(Tween_Time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), {
+					Scale = 0
+				})
+
+				Tween_Out:Play()
+				Tween_Out.Completed:Wait()
+
+				GUI['1'].Enabled = false
+			else
+				GUI['1'].Enabled = true
+
+				GUI["4"].Scale = 0
+
+				local Tween_In = TweenService:Create(GUI["4"], TweenInfo.new(Tween_Time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), {
+					Scale = 0.8
+				})
+
+				Tween_In:Play()
+			end
+		end
+	end)
+
+	Library['2'].TouchTap:Connect(function()
+		if GUI['1'].Enabled then
+			local Tween_Out = TweenService:Create(GUI["4"], TweenInfo.new(Tween_Time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), {
+				Scale = 0
+			})
+
+			Tween_Out:Play()
+			Tween_Out.Completed:Wait()
+
+			GUI['1'].Enabled = false
+		else
+			GUI['1'].Enabled = true
+
+			GUI["4"].Scale = 0
+
+			local Tween_In = TweenService:Create(GUI["4"], TweenInfo.new(Tween_Time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), {
+				Scale = 0.8
+			})
+
+			Tween_In:Play()
+		end
+	end)
+end
+
+local Old_GUI = game:GetService('CoreGui'):FindFirstChild("Byte_UI")
+
+function Library.new()
+	-- StarterGui.Byte_UI
+	GUI["1"] = Instance.new("ScreenGui", Player.PlayerGui);
+	GUI["1"]["IgnoreGuiInset"] = true;
+	GUI["1"]["ScreenInsets"] = Enum.ScreenInsets.DeviceSafeInsets;
+	GUI["1"]["Name"] = [[Byte_UI]];
+	GUI["1"]["ZIndexBehavior"] = Enum.ZIndexBehavior.Sibling;
+	GUI["1"]["ResetOnSpawn"] = false;
+
+	-- StarterGui.Byte_UI.Main_Menu_Window
+	GUI["2"] = Instance.new("Frame", GUI["1"]);
+	GUI["2"]["BorderSizePixel"] = 0;
+	GUI["2"]["BackgroundColor3"] = Color3.fromRGB(10, 11, 16);
+	GUI["2"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
+	GUI["2"]["Size"] = UDim2.new(0, 718, 0, 440);
+	GUI["2"]["Position"] = UDim2.new(0.5, 0, 0.5, 0);
+	GUI["2"]["Name"] = [[Main_Menu_Window]];
+	-- Attributes
+	GUI["2"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+	-- StarterGui.Byte_UI.Main_Menu_Window.UICorner
+	GUI["3"] = Instance.new("UICorner", GUI["2"]);
+	GUI["3"]["CornerRadius"] = UDim.new(0, 14);
+
+	-- GUI["4"] = Instance.new("UIScale", GUI["2"]);
+	-- GUI["4"].Scale = 1
+
+	if Is_Mobile then
+		GUI["4"] = Instance.new("UIScale", GUI["2"]);
+		GUI["4"].Scale = 0.8
+		GUI._targetScale = 0.8
+	else
+		GUI["4"] = Instance.new("UIScale", GUI["2"]);
+		GUI["4"].Scale = 1
+		GUI._targetScale = 1
+	end
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel
+	GUI["5"] = Instance.new("Frame", GUI["2"]);
+	GUI["5"]["BorderSizePixel"] = 0;
+	GUI["5"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
+	GUI["5"]["Size"] = UDim2.new(0, 180, 1, -16);
+	GUI["5"]["Position"] = UDim2.new(-0.03755, 0, 0.01818, 0);
+	GUI["5"]["Name"] = [[left_panel]];
+	GUI["5"]["BackgroundTransparency"] = 0.04;
+	-- Attributes
+	GUI["5"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0.04);
+
+	GUI["TabContainer"] = Instance.new("Frame", GUI["5"])
+	GUI["TabContainer"].BackgroundTransparency = 1
+	GUI["TabContainer"].Size = UDim2.new(1, 0, 0, 300)
+	GUI["TabContainer"].Position = UDim2.new(0, 0, 0, 90) -- BELOW logo
+	GUI["TabContainer"].Name = "TabContainer"
+
+	local TabList = Instance.new("UIListLayout", GUI["TabContainer"])
+	TabList.SortOrder = Enum.SortOrder.LayoutOrder
+	TabList.Padding = UDim.new(0, 6)
+	TabList.FillDirection = Enum.FillDirection.Vertical
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UICorner
+	GUI["6"] = Instance.new("UICorner", GUI["5"]);
+	GUI["6"]["CornerRadius"] = UDim.new(0, 14);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UIShadow
+	GUI["7"] = Instance.new("UIShadow", GUI["5"]);
+
+	-- Attributes
+	GUI["7"]:SetAttribute([[fadeOriginal_Transparency]], 0.55);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.IMG_Logo
+	GUI["8"] = Instance.new("ImageLabel", GUI["5"]);
+	GUI["8"]["BorderSizePixel"] = 0;
+	GUI["8"]["ScaleType"] = Enum.ScaleType.Fit;
+	-- 	GUI["8"]["Image"] = [[rbxassetid://78635294377960]];
+	GUI["8"]["Image"] =  [[rbxassetid://84194878517331]]
+
+	-- GUI["8"]["Image"] =  [[rbxassetid://129586962414039]]
+	GUI["8"]["Size"] = UDim2.new(0, 144, 0, 36);
+	GUI["8"]["BackgroundTransparency"] = 1;
+	GUI["8"]["Name"] = [[IMG_Logo]];
+	GUI["8"]["Position"] = UDim2.new(0, 18, 0, 14);
+	-- Attributes
+	GUI["8"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["8"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UserCard
+	GUI["9"] = Instance.new("Frame", GUI["5"]);
+	GUI["9"]["BorderSizePixel"] = 0;
+	GUI["9"]["BackgroundColor3"] = Color3.fromRGB(21, 21, 26);
+	GUI["9"]["Size"] = UDim2.new(0, 158, 0, 32);
+	GUI["9"]["Position"] = UDim2.new(0, 0, 0, 380);
+	GUI["9"]["Name"] = [[UserCard]];
+	GUI["9"]["BackgroundTransparency"] = 1;
+	-- Attributes
+	GUI["9"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UserCard.Name
+	GUI["a"] = Instance.new("TextLabel", GUI["9"]);
+	GUI["a"]["TextTruncate"] = Enum.TextTruncate.AtEnd;
+	GUI["a"]["TextSize"] = 12;
+	GUI["a"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["a"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["a"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["a"]["BackgroundTransparency"] = 1;
+	GUI["a"]["Size"] = UDim2.new(0, 90, 0, 13);
+	--GUI["a"]["Text"] = Player.DisplayName;
+	GUI["a"]["Text"] = 'Byteverserys'
+	GUI["a"]["Name"] = [[Name]];
+	GUI["a"]["Position"] = UDim2.new(0, 57, 0, 0);
+	-- Attributes
+	GUI["a"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["a"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UserCard.Expiry
+	GUI["b"] = Instance.new("TextLabel", GUI["9"]);
+	GUI["b"]["TextSize"] = 10;
+	GUI["b"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["b"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["b"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+	GUI["b"]["BackgroundTransparency"] = 1;
+	GUI["b"]["Size"] = UDim2.new(0, 96, 0, 11);
+	GUI["b"]["Text"] = [[Till:  Lifetime]];
+	GUI["b"]["Name"] = [[Expiry]];
+	GUI["b"]["Position"] = UDim2.new(0, 57, 0, 15);
+	-- Attributes
+	GUI["b"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["b"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UserCard.IMG_Avatar
+	GUI["c"] = Instance.new("ImageLabel", GUI["9"]);
+	GUI["c"]["BorderSizePixel"] = 0;
+	GUI["c"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	GUI["c"]["Image"] = [[rbxthumb://type=AvatarHeadShot&id=7329993111&w=48&h=48]];
+	GUI["c"]["Size"] = UDim2.new(0, 32, 0, 30);
+	GUI["c"]["BackgroundTransparency"] = 1;
+	GUI["c"]["Name"] = [[IMG_Avatar]];
+	GUI["c"]["Position"] = UDim2.new(0.09494, 0, 0.01989, 0);
+	-- Attributes
+	GUI["c"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["c"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UserCard.IMG_Avatar.UICorner
+	GUI["d"] = Instance.new("UICorner", GUI["c"]);
+	GUI["d"]["CornerRadius"] = UDim.new(1, 0);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content
+	GUI["1e"] = Instance.new("Frame", GUI["2"]);
+	GUI["1e"]["BorderSizePixel"] = 0;
+	GUI["1e"]["BackgroundColor3"] = Color3.fromRGB(27, 27, 34);
+	GUI["1e"]["Size"] = UDim2.new(1, -158, 0, 62);
+	GUI["1e"]["Position"] = UDim2.new(0, 158, 0, 0);
+	GUI["1e"]["Name"] = [[top_bar_content]];
+	GUI["1e"]["BackgroundTransparency"] = 1;
+	-- Attributes
+	GUI["1e"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search
+	GUI["1f"] = Instance.new("Frame", GUI["1e"]);
+	GUI["1f"]["BorderSizePixel"] = 0;
+	GUI["1f"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
+	GUI["1f"]["Size"] = UDim2.new(0, 207, 0, 34);
+	GUI["1f"]["Position"] = UDim2.new(0, 8, 0, 23);
+	GUI["1f"]["Name"] = [[search]];
+	GUI["1f"]["BackgroundTransparency"] = 0.1;
+	-- Attributes
+	GUI["1f"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0.1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search.UICorner
+	GUI["20"] = Instance.new("UICorner", GUI["1f"]);
+	GUI["20"]["CornerRadius"] = UDim.new(0, 10);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search.UIShadow
+	GUI["21"] = Instance.new("UIShadow", GUI["1f"]);
+
+	-- Attributes
+	GUI["21"]:SetAttribute([[fadeOriginal_Transparency]], 0.55);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search.IMG_SearchIcon
+	GUI["22"] = Instance.new("ImageLabel", GUI["1f"]);
+	GUI["22"]["BorderSizePixel"] = 0;
+	GUI["22"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["22"]["ImageTransparency"] = 0.3;
+	GUI["22"]["Image"] = [[rbxassetid://109659294248163]];
+	GUI["22"]["Size"] = UDim2.new(0, 14, 0, 14);
+	GUI["22"]["BackgroundTransparency"] = 1;
+	GUI["22"]["Name"] = [[IMG_SearchIcon]];
+	GUI["22"]["Position"] = UDim2.new(0, 12, 0, 10);
+	-- Attributes
+	GUI["22"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0.3);
+	GUI["22"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search.Placeholder
+	GUI["23"] = Instance.new("TextLabel", GUI["1f"]);
+	GUI["23"]["TextSize"] = 12;
+	GUI["23"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["23"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["23"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+	GUI["23"]["BackgroundTransparency"] = 1;
+	GUI["23"]["Size"] = UDim2.new(0, 160, 0, 34);
+	GUI["23"]["Text"] = [[Search...]];
+	GUI["23"]["Name"] = [[Placeholder]];
+	GUI["23"]["Position"] = UDim2.new(0, 36, 0, 0);
+	-- Attributes
+	GUI["23"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["23"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search.Input
+	GUI["24"] = Instance.new("TextBox", GUI["1f"]);
+	GUI["24"]["SelectionStart"] = 1;
+	GUI["24"]["Name"] = [[Input]];
+	GUI["24"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["24"]["ZIndex"] = 2;
+	GUI["24"]["TextSize"] = 12;
+	GUI["24"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["24"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["24"]["ClearTextOnFocus"] = false;
+	GUI["24"]["Size"] = UDim2.new(0, 160, 0, 34);
+	GUI["24"]["Position"] = UDim2.new(0, 36, 0, 0);
+	GUI["24"]["Text"] = [[]];
+	GUI["24"]["BackgroundTransparency"] = 1;
+	-- Attributes
+	GUI["24"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["24"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search.UIStroke
+	GUI["25"] = Instance.new("UIStroke", GUI["1f"]);
+	GUI["25"]["Transparency"] = 1;
+	GUI["25"]["Color"] = Color3.fromRGB(125, 109, 247);
+	-- Attributes
+	GUI["25"]:SetAttribute([[fadeOriginal_Transparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.LegitPvP_Button
+	GUI["26"] = Instance.new("Frame", GUI["1e"]);
+	GUI["26"]["BorderSizePixel"] = 0;
+	GUI["26"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
+	GUI["26"]["Size"] = UDim2.new(0, 95, 0, 34);
+	GUI["26"]["Position"] = UDim2.new(0, 453, 0, 23);
+	GUI["26"]["Name"] = [[LegitPvP_Button]];
+	GUI["26"]["BackgroundTransparency"] = 0.1;
+	-- Attributes
+	GUI["26"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0.1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.LegitPvP_Button.UICorner
+	GUI["27"] = Instance.new("UICorner", GUI["26"]);
+	GUI["27"]["CornerRadius"] = UDim.new(0, 10);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.LegitPvP_Button.Label
+	GUI["28"] = Instance.new("TextLabel", GUI["26"]);
+	GUI["28"]["TextTruncate"] = Enum.TextTruncate.AtEnd;
+	GUI["28"]["TextSize"] = 12;
+	GUI["28"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["28"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["28"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["28"]["BackgroundTransparency"] = 1;
+	GUI["28"]["Size"] = UDim2.new(0, 50, 0, 34);
+	GUI["28"]["Text"] = [[Config 1]];
+	GUI["28"]["Name"] = [[Label]];
+	GUI["28"]["Position"] = UDim2.new(0, 12, 0, 0);
+	-- Attributes
+	GUI["28"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["28"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.LegitPvP_Button.IMG_FolderIcon
+	GUI["29"] = Instance.new("ImageLabel", GUI["26"]);
+	GUI["29"]["BorderSizePixel"] = 0;
+	GUI["29"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["29"]["Image"] = [[rbxassetid://10723386277]];
+	GUI["29"]["Size"] = UDim2.new(0, 16, 0, 16);
+	GUI["29"]["BackgroundTransparency"] = 1;
+	GUI["29"]["Name"] = [[IMG_FolderIcon]];
+	GUI["29"]["Position"] = UDim2.new(0, 70, 0, 9);
+	-- Attributes
+	GUI["29"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["29"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.LegitPvP_Button.Hit
+	GUI["2a"] = Instance.new("TextButton", GUI["26"]);
+	GUI["2a"]["AutoButtonColor"] = false;
+	GUI["2a"]["ZIndex"] = 3;
+	GUI["2a"]["BackgroundTransparency"] = 1;
+	GUI["2a"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["2a"]["Text"] = [[]];
+	GUI["2a"]["Name"] = [[Hit]];
+	-- Attributes
+	GUI["2a"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["2a"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	GUI.Indicator = Instance.new("ImageLabel", GUI["5"])
+	GUI.Indicator.BorderSizePixel = 0
+	GUI.Indicator.Image = "rbxassetid://90362801488029"
+	GUI.Indicator.Size = UDim2.new(0, 3, 0, 15)
+	GUI.Indicator.BackgroundTransparency = 1
+	GUI.Indicator.Name = "indicator"
+	GUI.Indicator.Position = UDim2.new(0, 0, 0, 93)
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.Highlight
+	GUI["e"] = Instance.new("Frame", GUI["5"]);
+	GUI["e"]["BorderSizePixel"] = 0;
+	GUI["e"]["BackgroundColor3"] = Color3.fromRGB(23, 24, 32);
+	GUI["e"]["Size"] = UDim2.new(1, -26, 0, 23);
+	GUI["e"]["Position"] = UDim2.new(0, 8, 0, 90);
+	GUI["e"]["Name"] = [[Highlight]];
+	GUI["e"].Visible = true
+	GUI["e"].ZIndex = 0
+
+	-- Attributes
+	GUI["e"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.Highlight.UICorner
+	GUI["f"] = Instance.new("UICorner", GUI["e"]);
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.Highlight.UIShadow
+	GUI["10"] = Instance.new("UIShadow", GUI["e"]);
+	-- Attributes
+	GUI["10"]:SetAttribute([[fadeOriginal_Transparency]], 0.55);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window
+	GUI["ef"] = Instance.new("Frame", GUI["2"]);
+	GUI["ef"]["Visible"] = false;
+	GUI["ef"]["ZIndex"] = 60;
+	GUI["ef"]["BorderSizePixel"] = 0;
+	GUI["ef"]["BackgroundColor3"] = Color3.fromRGB(10, 11, 16);
+	GUI["ef"]["Size"] = UDim2.new(0, 236, 0, 490);
+	GUI["ef"]["Position"] = UDim2.new(0, 737, 0, 3);
+	GUI["ef"]["Name"] = [[name_config_window]];
+	-- Attributes
+	GUI["ef"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+	GUI["ef"]:SetAttribute([[fadeToken]], 3);
+	GUI["ef"]:SetAttribute([[fadeIsolated]], true);
+	GUI["ef"].ClipsDescendants = true
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.UICorner
+	GUI["f0"] = Instance.new("UICorner", GUI["ef"]);
+	GUI["f0"]["CornerRadius"] = UDim.new(0, 12);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.UIStroke
+	GUI["f1"] = Instance.new("UIStroke", GUI["ef"]);
+	GUI["f1"]["Transparency"] = 0.4;
+	GUI["f1"]["Color"] = Color3.fromRGB(47, 47, 58);
+	-- Attributes
+	GUI["f1"]:SetAttribute([[fadeOriginal_Transparency]], 0.4);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.IMG_CloudIcon
+	GUI["f2"] = Instance.new("ImageLabel", GUI["ef"]);
+	GUI["f2"]["ZIndex"] = 61;
+	GUI["f2"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["f2"]["ImageColor3"] = Color3.fromRGB(151, 151, 162);
+	GUI["f2"]["Image"] = [[rbxassetid://70621328130295]];
+	GUI["f2"]["Size"] = UDim2.new(0, 18, 0, 18);
+	GUI["f2"]["BackgroundTransparency"] = 1;
+	GUI["f2"]["Name"] = [[IMG_CloudIcon]];
+	GUI["f2"]["Position"] = UDim2.new(0, 14, 0, 15);
+	-- Attributes
+	GUI["f2"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["f2"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.Title
+	GUI["f3"] = Instance.new("TextLabel", GUI["ef"]);
+	GUI["f3"]["ZIndex"] = 61;
+	GUI["f3"]["TextSize"] = 14;
+	GUI["f3"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["f3"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["f3"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["f3"]["BackgroundTransparency"] = 1;
+	GUI["f3"]["Size"] = UDim2.new(0, 120, 0, 24);
+	GUI["f3"]["Text"] = [[Presets]];
+	GUI["f3"]["Name"] = [[Title]];
+	GUI["f3"]["Position"] = UDim2.new(0, 40, 0, 12);
+	-- Attributes
+	GUI["f3"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["f3"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.AddButton
+	GUI["f4"] = Instance.new("Frame", GUI["ef"]);
+	GUI["f4"]["ZIndex"] = 61;
+	GUI["f4"]["BorderSizePixel"] = 0;
+	GUI["f4"]["BackgroundColor3"] = Color3.fromRGB(25, 24, 43);
+	GUI["f4"]["Size"] = UDim2.new(0, 26, 0, 26);
+	GUI["f4"]["Position"] = UDim2.new(0, 196, 0, 11);
+	GUI["f4"]["Name"] = [[AddButton]];
+	-- Attributes
+	GUI["f4"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.AddButton.UICorner
+	GUI["f5"] = Instance.new("UICorner", GUI["f4"]);
+	GUI["f5"]["CornerRadius"] = UDim.new(0, 7);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.AddButton.IMG_Add
+	GUI["f6"] = Instance.new("ImageLabel", GUI["f4"]);
+	GUI["f6"]["ZIndex"] = 61;
+	GUI["f6"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["f6"]["ImageColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["f6"]["Image"] = [[rbxassetid://101123124881873]];
+	GUI["f6"]["Size"] = UDim2.new(0, 14, 0, 14);
+	GUI["f6"]["BackgroundTransparency"] = 1;
+	GUI["f6"]["Name"] = [[IMG_Add]];
+	GUI["f6"]["Position"] = UDim2.new(0, 6, 0, 6);
+	-- Attributes
+	GUI["f6"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["f6"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.AddButton.Hit
+	GUI["f7"] = Instance.new("TextButton", GUI["f4"]);
+	GUI["f7"]["AutoButtonColor"] = false;
+	GUI["f7"]["ZIndex"] = 62;
+	GUI["f7"]["BackgroundTransparency"] = 1;
+	GUI["f7"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["f7"]["Text"] = [[]];
+	GUI["f7"]["Name"] = [[Hit]];
+	-- Attributes
+	GUI["f7"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["f7"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.AddButton.UIStroke
+	GUI["f8"] = Instance.new("UIStroke", GUI["f4"]);
+	GUI["f8"]["Transparency"] = 1;
+	GUI["f8"]["Color"] = Color3.fromRGB(85, 85, 101);
+	-- Attributes
+	GUI["f8"]:SetAttribute([[fadeOriginal_Transparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SearchField
+	GUI["f9"] = Instance.new("Frame", GUI["ef"]);
+	GUI["f9"]["ZIndex"] = 61;
+	GUI["f9"]["BorderSizePixel"] = 0;
+	GUI["f9"]["BackgroundColor3"] = Color3.fromRGB(25, 24, 43);
+	GUI["f9"]["Size"] = UDim2.new(0, 174, 0, 34);
+	GUI["f9"]["Position"] = UDim2.new(0, 14, 0, 50);
+	GUI["f9"]["Name"] = [[SearchField]];
+	-- Attributes
+	GUI["f9"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SearchField.UICorner
+	GUI["fa"] = Instance.new("UICorner", GUI["f9"]);
+
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SearchField.IMG_SearchIcon
+	GUI["fb"] = Instance.new("ImageLabel", GUI["f9"]);
+	GUI["fb"]["ZIndex"] = 61;
+	GUI["fb"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["fb"]["ImageColor3"] = Color3.fromRGB(151, 151, 162);
+	GUI["fb"]["Image"] = [[rbxassetid://72296609649861]];
+	GUI["fb"]["Size"] = UDim2.new(0, 14, 0, 14);
+	GUI["fb"]["BackgroundTransparency"] = 1;
+	GUI["fb"]["Name"] = [[IMG_SearchIcon]];
+	GUI["fb"]["Position"] = UDim2.new(0, 10, 0, 10);
+	-- Attributes
+	GUI["fb"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["fb"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SearchField.Input
+	GUI["fc"] = Instance.new("TextBox", GUI["f9"]);
+	GUI["fc"]["Name"] = [[Input]];
+	GUI["fc"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["fc"]["PlaceholderColor3"] = Color3.fromRGB(121, 121, 132);
+	GUI["fc"]["ZIndex"] = 61;
+	GUI["fc"]["TextSize"] = 12;
+	GUI["fc"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["fc"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+	GUI["fc"]["ClearTextOnFocus"] = false;
+	GUI["fc"]["PlaceholderText"] = [[Search]];
+	GUI["fc"]["Size"] = UDim2.new(0, 130, 0, 34);
+	GUI["fc"]["Position"] = UDim2.new(0, 32, 0, 0);
+	GUI["fc"]["Text"] = [[]];
+	GUI["fc"]["BackgroundTransparency"] = 1;
+	-- Attributes
+	GUI["fc"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["fc"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SortButton
+	GUI["fd"] = Instance.new("Frame", GUI["ef"]);
+	GUI["fd"]["ZIndex"] = 61;
+	GUI["fd"]["BorderSizePixel"] = 0;
+	GUI["fd"]["BackgroundColor3"] = Color3.fromRGB(25, 24, 43);
+	GUI["fd"]["Size"] = UDim2.new(0, 30, 0, 34);
+	GUI["fd"]["Position"] = UDim2.new(0, 192, 0, 50);
+	GUI["fd"]["Name"] = [[SortButton]];
+	-- Attributes
+	GUI["fd"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SortButton.UICorner
+	GUI["fe"] = Instance.new("UICorner", GUI["fd"]);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SortButton.IMG_SortIcon
+	GUI["ff"] = Instance.new("ImageLabel", GUI["fd"]);
+	GUI["ff"]["ZIndex"] = 61;
+	GUI["ff"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["ff"]["ImageColor3"] = Color3.fromRGB(151, 151, 162);
+	GUI["ff"]["Image"] = [[rbxassetid://117405374619280]];
+	GUI["ff"]["Size"] = UDim2.new(0, 14, 0, 14);
+	GUI["ff"]["BackgroundTransparency"] = 1;
+	GUI["ff"]["Name"] = [[IMG_SortIcon]];
+	GUI["ff"]["Position"] = UDim2.new(0, 8, 0, 10);
+	-- Attributes
+	GUI["ff"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["ff"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SortButton.Hit
+	GUI["100"] = Instance.new("TextButton", GUI["fd"]);
+	GUI["100"]["AutoButtonColor"] = false;
+	GUI["100"]["ZIndex"] = 62;
+	GUI["100"]["BackgroundTransparency"] = 1;
+	GUI["100"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["100"]["Text"] = [[]];
+	GUI["100"]["Name"] = [[Hit]];
+	-- Attributes
+	GUI["100"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["100"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.SortButton.UIStroke
+	GUI["101"] = Instance.new("UIStroke", GUI["fd"]);
+	GUI["101"]["Transparency"] = 1;
+	GUI["101"]["Color"] = Color3.fromRGB(85, 85, 101);
+	-- Attributes
+	GUI["101"]:SetAttribute([[fadeOriginal_Transparency]], 1);
+
+	-- StarterGui.Byte_UI.keybind_picker_window
+	GUI["kpw"] = Instance.new("Frame", GUI["1"]);
+	GUI["kpw"]["BorderSizePixel"] = 0;
+	GUI["kpw"]["BackgroundColor3"] = Color3.fromRGB(9, 10, 15);
+	GUI["kpw"]["ZIndex"] = 90;
+	GUI["kpw"]["Size"] = UDim2.new(0, 150, 0, 76);
+	GUI["kpw"]["Position"] = UDim2.new(0, 500, 0, 200);
+	GUI["kpw"]["Name"] = [[keybind_picker_window]];
+	GUI["kpw"]["Visible"] = false;
+	GUI["kpw"].ClipsDescendants = true
+	GUI["kpw"]:SetAttribute([[fadeIsolated]], true);
+
+	-- StarterGui.Byte_UI.keybind_picker_window.UICorner
+	GUI["kpw_c"] = Instance.new("UICorner", GUI["kpw"]);
+	GUI["kpw_c"]["CornerRadius"] = UDim.new(0, 10);
+
+	-- StarterGui.Byte_UI.keybind_picker_window.UIStroke
+	GUI["kpw_s"] = Instance.new("UIStroke", GUI["kpw"]);
+	GUI["kpw_s"]["Transparency"] = 0.45;
+	GUI["kpw_s"]["Color"] = Color3.fromRGB(48, 48, 58);
+
+	-- StarterGui.Byte_UI.keybind_picker_window.UIShadow
+	GUI["kpw_sh"] = Instance.new("UIShadow", GUI["kpw"]);
+	GUI["kpw_sh"]["Transparency"] = 1;
+	GUI["kpw_sh"]:SetAttribute([[fadeOriginal_Transparency]], 1);
+
+	-- StarterGui.Byte_UI.keybind_picker_window.NewBindField
+	GUI["kpw_nbf"] = Instance.new("Frame", GUI["kpw"]);
+	GUI["kpw_nbf"]["BorderSizePixel"] = 0;
+	GUI["kpw_nbf"]["BackgroundColor3"] = Color3.fromRGB(22, 23, 31);
+	GUI["kpw_nbf"]["ZIndex"] = 56;
+	GUI["kpw_nbf"]["Size"] = UDim2.new(0, 134, 0, 26);
+	GUI["kpw_nbf"]["Position"] = UDim2.new(0, 8, 0, 8);
+	GUI["kpw_nbf"]["Name"] = [[NewBindField]];
+
+	-- NewBindField.UICorner
+	GUI["kpw_nbf_c"] = Instance.new("UICorner", GUI["kpw_nbf"]);
+	GUI["kpw_nbf_c"]["CornerRadius"] = UDim.new(0, 7);
+
+	-- NewBindField.UIStroke (same purple border as search input when focused)
+	GUI["kpw_nbf_s"] = Instance.new("UIStroke", GUI["kpw_nbf"]);
+	GUI["kpw_nbf_s"]["Transparency"] = 1;
+	GUI["kpw_nbf_s"]["Color"] = Color3.fromRGB(125, 109, 247);
+
+	-- NewBindField.IMG_BindIcon
+	GUI["kpw_nbf_i"] = Instance.new("ImageLabel", GUI["kpw_nbf"]);
+	GUI["kpw_nbf_i"]["BorderSizePixel"] = 0;
+	GUI["kpw_nbf_i"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["kpw_nbf_i"]["ImageColor3"] = Color3.fromRGB(138, 138, 148);
+	GUI["kpw_nbf_i"]["Image"] = [[rbxassetid://122878673716704]];
+	GUI["kpw_nbf_i"]["ZIndex"] = 56;
+	GUI["kpw_nbf_i"]["Size"] = UDim2.new(0, 12, 0, 12);
+	GUI["kpw_nbf_i"]["BackgroundTransparency"] = 1;
+	GUI["kpw_nbf_i"]["Name"] = [[IMG_BindIcon]];
+	GUI["kpw_nbf_i"]["Position"] = UDim2.new(0, 9, 0, 7);
+
+	-- NewBindField.Placeholder
+	GUI["kpw_nbf_p"] = Instance.new("TextLabel", GUI["kpw_nbf"]);
+	GUI["kpw_nbf_p"]["TextSize"] = 12;
+	GUI["kpw_nbf_p"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["kpw_nbf_p"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+	GUI["kpw_nbf_p"]["TextColor3"] = Color3.fromRGB(138, 138, 148);
+	GUI["kpw_nbf_p"]["BackgroundTransparency"] = 1;
+	GUI["kpw_nbf_p"]["ZIndex"] = 56;
+	GUI["kpw_nbf_p"]["Size"] = UDim2.new(0, 82, 0, 26);
+	GUI["kpw_nbf_p"]["Text"] = [[New bind]];
+	GUI["kpw_nbf_p"]["Name"] = [[Placeholder]];
+	GUI["kpw_nbf_p"]["Position"] = UDim2.new(0, 27, 0, 0);
+
+	-- NewBindField.IMG_Plus
+	GUI["kpw_nbf_pp"] = Instance.new("ImageLabel", GUI["kpw_nbf"]);
+	GUI["kpw_nbf_pp"]["BorderSizePixel"] = 0;
+	GUI["kpw_nbf_pp"]["ScaleType"] = Enum.ScaleType.Fit;
+	GUI["kpw_nbf_pp"]["ImageColor3"] = Color3.fromRGB(138, 138, 148);
+	GUI["kpw_nbf_pp"]["Image"] = [[rbxassetid://101123124881873]];
+	GUI["kpw_nbf_pp"]["ZIndex"] = 56;
+	GUI["kpw_nbf_pp"]["Size"] = UDim2.new(0, 12, 0, 12);
+	GUI["kpw_nbf_pp"]["BackgroundTransparency"] = 1;
+	GUI["kpw_nbf_pp"]["Name"] = [[IMG_Plus]];
+	GUI["kpw_nbf_pp"]["Position"] = UDim2.new(0, 116, 0, 7);
+
+	-- NewBindField.Hit
+	GUI["kpw_nbf_h"] = Instance.new("TextButton", GUI["kpw_nbf"]);
+	GUI["kpw_nbf_h"]["AutoButtonColor"] = false;
+	GUI["kpw_nbf_h"]["ZIndex"] = 57;
+	GUI["kpw_nbf_h"]["BackgroundTransparency"] = 1;
+	GUI["kpw_nbf_h"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["kpw_nbf_h"]["Text"] = [[]];
+	GUI["kpw_nbf_h"]["Name"] = [[Hit]];
+
+	-- StarterGui.Byte_UI.keybind_picker_window.ToggleButton
+	GUI["kpw_tb"] = Instance.new("Frame", GUI["kpw"]);
+	GUI["kpw_tb"]["BorderSizePixel"] = 0;
+	GUI["kpw_tb"]["BackgroundColor3"] = Color3.fromRGB(41, 43, 54);
+	GUI["kpw_tb"]["ZIndex"] = 56;
+	GUI["kpw_tb"]["Size"] = UDim2.new(0, 65, 0, 26);
+	GUI["kpw_tb"]["Position"] = UDim2.new(0, 8, 0, 42);
+	GUI["kpw_tb"]["Name"] = [[ToggleButton]];
+
+	-- ToggleButton.UICorner
+	GUI["kpw_tb_c"] = Instance.new("UICorner", GUI["kpw_tb"]);
+	GUI["kpw_tb_c"]["CornerRadius"] = UDim.new(0, 7);
+
+	-- ToggleButton.UIStroke
+	GUI["kpw_tb_s"] = Instance.new("UIStroke", GUI["kpw_tb"]);
+	GUI["kpw_tb_s"]["Transparency"] = 1;
+	GUI["kpw_tb_s"]["Color"] = Color3.fromRGB(84, 84, 100);
+
+	-- ToggleButton.Hit
+	GUI["kpw_tb_h"] = Instance.new("TextButton", GUI["kpw_tb"]);
+	GUI["kpw_tb_h"]["AutoButtonColor"] = false;
+	GUI["kpw_tb_h"]["ZIndex"] = 57;
+	GUI["kpw_tb_h"]["BackgroundTransparency"] = 1;
+	GUI["kpw_tb_h"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["kpw_tb_h"]["Text"] = [[]];
+	GUI["kpw_tb_h"]["Name"] = [[Hit]];
+
+	-- StarterGui.Byte_UI.keybind_picker_window.HoldButton
+	GUI["kpw_hb"] = Instance.new("Frame", GUI["kpw"]);
+	GUI["kpw_hb"]["BorderSizePixel"] = 0;
+	GUI["kpw_hb"]["BackgroundColor3"] = Color3.fromRGB(41, 43, 54);
+	GUI["kpw_hb"]["ZIndex"] = 56;
+	GUI["kpw_hb"]["Size"] = UDim2.new(0, 65, 0, 26);
+	GUI["kpw_hb"]["Position"] = UDim2.new(0, 77, 0, 42);
+	GUI["kpw_hb"]["Name"] = [[HoldButton]];
+
+	-- HoldButton.UICorner
+	GUI["kpw_hb_c"] = Instance.new("UICorner", GUI["kpw_hb"]);
+	GUI["kpw_hb_c"]["CornerRadius"] = UDim.new(0, 7);
+
+	-- HoldButton.UIStroke
+	GUI["kpw_hb_s"] = Instance.new("UIStroke", GUI["kpw_hb"]);
+	GUI["kpw_hb_s"]["Transparency"] = 1;
+	GUI["kpw_hb_s"]["Color"] = Color3.fromRGB(84, 84, 100);
+
+	-- HoldButton.Hit
+	GUI["kpw_hb_h"] = Instance.new("TextButton", GUI["kpw_hb"]);
+	GUI["kpw_hb_h"]["AutoButtonColor"] = false;
+	GUI["kpw_hb_h"]["ZIndex"] = 57;
+	GUI["kpw_hb_h"]["BackgroundTransparency"] = 1;
+	GUI["kpw_hb_h"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["kpw_hb_h"]["Text"] = [[]];
+	GUI["kpw_hb_h"]["Name"] = [[Hit]];
+
+	-- StarterGui.Byte_UI.keybind_picker_window.ModeSelection
+	GUI["kpw_ms"] = Instance.new("Frame", GUI["kpw"]);
+	GUI["kpw_ms"]["BorderSizePixel"] = 0;
+	GUI["kpw_ms"]["BackgroundColor3"] = Color3.fromRGB(123, 104, 246);
+	GUI["kpw_ms"]["ZIndex"] = 56;
+	GUI["kpw_ms"]["Size"] = UDim2.new(0, 65, 0, 26);
+	GUI["kpw_ms"]["Position"] = UDim2.new(0, 8, 0, 42);
+	GUI["kpw_ms"]["Name"] = [[ModeSelection]];
+
+	-- ModeSelection.UICorner
+	GUI["kpw_ms_c"] = Instance.new("UICorner", GUI["kpw_ms"]);
+	GUI["kpw_ms_c"]["CornerRadius"] = UDim.new(0, 7);
+
+	-- StarterGui.Byte_UI.keybind_picker_window.ToggleLabel
+	GUI["kpw_tl"] = Instance.new("TextLabel", GUI["kpw"]);
+	GUI["kpw_tl"]["TextSize"] = 12;
+	GUI["kpw_tl"]["TextXAlignment"] = Enum.TextXAlignment.Center;
+	GUI["kpw_tl"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["kpw_tl"]["TextColor3"] = Color3.fromRGB(34, 29, 72);
+	GUI["kpw_tl"]["BackgroundTransparency"] = 1;
+	GUI["kpw_tl"]["ZIndex"] = 56;
+	GUI["kpw_tl"]["Size"] = UDim2.new(0, 65, 0, 26);
+	GUI["kpw_tl"]["Text"] = [[Toggle]];
+	GUI["kpw_tl"]["Name"] = [[ToggleLabel]];
+	GUI["kpw_tl"]["Position"] = UDim2.new(0, 8, 0, 42);
+
+	-- StarterGui.Byte_UI.keybind_picker_window.HoldLabel
+	GUI["kpw_hl"] = Instance.new("TextLabel", GUI["kpw"]);
+	GUI["kpw_hl"]["TextSize"] = 12;
+	GUI["kpw_hl"]["TextXAlignment"] = Enum.TextXAlignment.Center;
+	GUI["kpw_hl"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["kpw_hl"]["TextColor3"] = Color3.fromRGB(244, 244, 248);
+	GUI["kpw_hl"]["BackgroundTransparency"] = 1;
+	GUI["kpw_hl"]["ZIndex"] = 56;
+	GUI["kpw_hl"]["Size"] = UDim2.new(0, 65, 0, 26);
+	GUI["kpw_hl"]["Text"] = [[Hold]];
+	GUI["kpw_hl"]["Name"] = [[HoldLabel]];
+	GUI["kpw_hl"]["Position"] = UDim2.new(0, 77, 0, 42);
+
+	-- Keybind picker logic
+	local function getKeyName(input)
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			return input.KeyCode
+		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+			return Enum.UserInputType.MouseButton1
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			return Enum.UserInputType.MouseButton2
+		elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
+			return Enum.UserInputType.MouseButton3
+		end
+
+		return nil
+	end
+
+	local function formatKeyName(key)
+		if typeof(key) == "EnumItem" then
+			if key.EnumType == Enum.UserInputType then
+				if key == Enum.UserInputType.MouseButton1 then return "M1" end
+				if key == Enum.UserInputType.MouseButton2 then return "M2" end
+				if key == Enum.UserInputType.MouseButton3 then return "M3" end
+			end
+			local name = key.Name
+			name = name:gsub("Left", "L"):gsub("Right", "R"):gsub("Control", "Ctrl"):gsub("Shift", "Shf")
+			return name
+		end
+		return "None"
+	end
+
+	local Ignored_Keys = {
+		Enum.KeyCode.LeftControl,
+		Enum.KeyCode.RightControl,
+		Enum.KeyCode.LeftAlt,
+		Enum.KeyCode.RightAlt,
+	}
+
+	-- NewBindField click: start waiting for a key
+	GUI["kpw_nbf_h"].MouseButton1Click:Connect(function()
+		if not GUI.ActiveKeybindToggle then return end
+		GUI.WaitingForKey = true
+
+		GUI["kpw_nbf_p"].Text = [[Press a key...]]
+		GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(125, 109, 247)
+		TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 0}):Play()
+	end)
+
+	-- Toggle mode button
+	GUI["kpw_tb_h"].MouseButton1Click:Connect(function()
+		if not GUI.ActiveKeybindToggle then return end
+		GUI.ActiveKeybindToggle.KeybindMode = "toggle"
+		if Library.Keybinds[GUI.ActiveKeybindToggle] then
+			Library.Keybinds[GUI.ActiveKeybindToggle].mode = "toggle"
+		end
+		if GUI.ActiveKeybindToggle.flag and Library.Flags[GUI.ActiveKeybindToggle.flag .. "_keybind"] then
+			Library.Flags[GUI.ActiveKeybindToggle.flag .. "_keybind"].mode = "toggle"
+			Library.save_flags()
+		end
+		TweenService:Create(GUI["kpw_ms"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 8, 0, 42)}):Play()
+		GUI["kpw_tl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+		GUI["kpw_hl"].TextColor3 = Color3.fromRGB(244, 244, 248)
+	end)
+
+	-- Hold mode button
+	GUI["kpw_hb_h"].MouseButton1Click:Connect(function()
+		if not GUI.ActiveKeybindToggle then return end
+		GUI.ActiveKeybindToggle.KeybindMode = "hold"
+		if Library.Keybinds[GUI.ActiveKeybindToggle] then
+			Library.Keybinds[GUI.ActiveKeybindToggle].mode = "hold"
+		end
+		if GUI.ActiveKeybindToggle.flag and Library.Flags[GUI.ActiveKeybindToggle.flag .. "_keybind"] then
+			Library.Flags[GUI.ActiveKeybindToggle.flag .. "_keybind"].mode = "hold"
+			Library.save_flags()
+		end
+		TweenService:Create(GUI["kpw_ms"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 77, 0, 42)}):Play()
+		GUI["kpw_tl"].TextColor3 = Color3.fromRGB(244, 244, 248)
+		GUI["kpw_hl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+	end)
+
+	-- Capture key when waiting
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if not GUI.WaitingForKey then return end
+
+		-- Escape clears the keybind
+		if input.KeyCode == Enum.KeyCode.End then
+			GUI.WaitingForKey = false
+			local toggle = GUI.ActiveKeybindToggle
+			if toggle then
+				toggle.Keybind = nil
+				toggle.KeybindName = nil
+				Library.Keybinds[toggle] = nil
+				if toggle.flag then
+					Library.Flags[toggle.flag .. "_keybind"] = nil
+					Library.save_flags()
+				end
+				if toggle["72_text"] then
+					toggle["72_text"].Text = "···"
+					toggle["72_text"].TextColor3 = Color3.fromRGB(138, 138, 148)
+				end
+				if toggle["73_s"] then
+					TweenService:Create(toggle["73_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+				end
+			end
+			GUI["kpw_nbf_p"].Text = "New bind"
+			GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(138, 138, 148)
+			TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+			return
+		end
+
+		local key = getKeyName(input)
+
+		if key == nil then
+			return
+		end
+
+		if table.find(Ignored_Keys, key) then
+			return
+		end
+
+		GUI.WaitingForKey = false
+
+		local toggle = GUI.ActiveKeybindToggle
+		if not toggle then return end
+
+		-- Set the keybind
+		toggle.Keybind = key
+		toggle.KeybindName = formatKeyName(key)
+		if not toggle.KeybindMode then
+			toggle.KeybindMode = "toggle"
+		end
+
+		-- Register in global keybinds list
+		Library.Keybinds[toggle] = {
+			key = key,
+			mode = toggle.KeybindMode,
+			flag = toggle.flag
+		}
+
+		-- Save keybind to flags
+		if toggle.flag then
+			Library.Flags[toggle.flag .. "_keybind"] = {
+				keyName = key.Name,
+				keyType = key.EnumType == Enum.KeyCode and "KeyCode" or "UserInputType",
+				displayName = formatKeyName(key),
+				mode = toggle.KeybindMode
+			}
+			Library.save_flags()
+		end
+
+		-- Update UI
+		GUI["kpw_nbf_p"].Text = formatKeyName(key)
+		GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(243, 243, 247)
+		TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+
+		if toggle["72_text"] then
+			toggle["72_text"].Text = formatKeyName(key)
+			toggle["72_text"].TextColor3 = Color3.fromRGB(125, 109, 247)
+		end
+
+		-- Show the purple UIStroke border on the assigned keybind button (matches keybind picker focused state)
+		if toggle["73_s"] then
+			TweenService:Create(toggle["73_s"], TweenInfo.new(0.2), {Transparency = 0}):Play()
+		end
+	end)
+
+	-- Global keybind handling (toggle and hold modes)
+	local MovementKeys = {
+		[Enum.KeyCode.W] = true,
+		[Enum.KeyCode.A] = true,
+		[Enum.KeyCode.S] = true,
+		[Enum.KeyCode.D] = true,
+
+		[Enum.KeyCode.Space] = true,
+
+		-- Common Roblox movement keys
+		[Enum.KeyCode.Up] = true,
+		[Enum.KeyCode.Down] = true,
+		[Enum.KeyCode.Left] = true,
+		[Enum.KeyCode.Right] = true,
+	}
+
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if GUI.WaitingForKey then return end
+
+		local key = getKeyName(input)
+		if key == nil then return end
+
+		if gpe then
+			return
+		end
+
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			if MovementKeys[input.KeyCode] then
+				return
+			end
+		end
+
+		for toggle, bind in pairs(Library.Keybinds) do
+			if bind.key == key and toggle.flag then
+				if bind.mode == "toggle" then
+					-- Only trigger on the actual key press, not repeats
+					if not toggle._keybindHeld then
+						toggle._keybindHeld = true
+						pcall(function() toggle:Toggle() end)
+					end
+				elseif bind.mode == "hold" then
+					toggle._keybindHeld = true
+					pcall(function() toggle:Toggle(true) end)
+				end
+			end
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input, gpe)
+		local key = getKeyName(input)
+		if key == nil then return end
+
+		for toggle, bind in pairs(Library.Keybinds) do
+			if bind.key == key and toggle.flag then
+				if bind.mode == "toggle" then
+					toggle._keybindHeld = false
+				elseif bind.mode == "hold" then
+					toggle._keybindHeld = false
+					pcall(function() toggle:Toggle(false) end)
+				end
+			end
+		end
+	end)
+
+	-- ColorPicker popup window
+	GUI["cpw"] = Instance.new("Frame", GUI["1"]);
+	GUI["cpw"]["BorderSizePixel"] = 0;
+	GUI["cpw"]["BackgroundColor3"] = Color3.fromRGB(9, 10, 15);
+	GUI["cpw"]["ZIndex"] = 90;
+	GUI["cpw"]["Size"] = UDim2.new(0, 150, 0, 200);
+	GUI["cpw"]["Position"] = UDim2.new(0, 500, 0, 200);
+	GUI["cpw"].Position = UDim2.new(-0.04, 1098, 0.286, 240)
+
+	--GUI["cpw"].Position = UDim2.new(-0.04, 1098, 0.286, 240)
+
+	GUI["cpw"]["Name"] = [[color_picker_window]];
+	GUI["cpw"]["Visible"] = false;
+	GUI["cpw"].ClipsDescendants = true;
+	GUI["cpw"]:SetAttribute([[fadeIsolated]], true);
+
+	GUI["cpw_c"] = Instance.new("UICorner", GUI["cpw"]);
+	GUI["cpw_c"]["CornerRadius"] = UDim.new(0, 10);
+
+	GUI["cpw_s"] = Instance.new("UIStroke", GUI["cpw"]);
+	GUI["cpw_s"]["Transparency"] = 0.45;
+	GUI["cpw_s"]["Color"] = Color3.fromRGB(48, 48, 58);
+
+	GUI["cpw_sh"] = Instance.new("UIShadow", GUI["cpw"]);
+	GUI["cpw_sh"]["Transparency"] = 1;
+	GUI["cpw_sh"]:SetAttribute([[fadeOriginal_Transparency]], 1);
+
+	-- Palette (saturation/value area)
+	GUI["cpw_pal"] = Instance.new("Frame", GUI["cpw"]);
+	GUI["cpw_pal"]["BackgroundColor3"] = Color3.fromRGB(0, 110, 255);
+	GUI["cpw_pal"]["BorderSizePixel"] = 0;
+	GUI["cpw_pal"]["ClipsDescendants"] = true;
+	GUI["cpw_pal"]["Position"] = UDim2.new(0, 10, 0, 10);
+	GUI["cpw_pal"]["Size"] = UDim2.new(0, 106, 0, 106);
+	GUI["cpw_pal"]["ZIndex"] = 51;
+	GUI["cpw_pal"]["Name"] = [[Palette]];
+
+	local cpw_pal_c = Instance.new("UICorner", GUI["cpw_pal"]);
+	cpw_pal_c.CornerRadius = UDim.new(0, 6);
+
+	-- White overlay (left-to-right gradient: opaque white -> transparent)
+	GUI["cpw_pal_w"] = Instance.new("Frame", GUI["cpw_pal"]);
+	GUI["cpw_pal_w"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	GUI["cpw_pal_w"]["BorderSizePixel"] = 0;
+	GUI["cpw_pal_w"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["cpw_pal_w"]["ZIndex"] = 51;
+	GUI["cpw_pal_w"]["Name"] = [[WhiteOverlay]];
+
+	local cpw_pal_w_c = Instance.new("UICorner", GUI["cpw_pal_w"]);
+	cpw_pal_w_c.CornerRadius = UDim.new(0, 6);
+
+	local cpw_pal_w_g = Instance.new("UIGradient", GUI["cpw_pal_w"]);
+	cpw_pal_w_g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	});
+
+	-- Black overlay (top-to-bottom gradient: transparent -> opaque black)
+	GUI["cpw_pal_b"] = Instance.new("Frame", GUI["cpw_pal"]);
+	GUI["cpw_pal_b"]["BackgroundColor3"] = Color3.fromRGB(0, 0, 0);
+	GUI["cpw_pal_b"]["BorderSizePixel"] = 0;
+	GUI["cpw_pal_b"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["cpw_pal_b"]["ZIndex"] = 51;
+	GUI["cpw_pal_b"]["Name"] = [[BlackOverlay]];
+
+	local cpw_pal_b_c = Instance.new("UICorner", GUI["cpw_pal_b"]);
+	cpw_pal_b_c.CornerRadius = UDim.new(0, 6);
+
+	local cpw_pal_b_g = Instance.new("UIGradient", GUI["cpw_pal_b"]);
+	cpw_pal_b_g.Rotation = 90;
+	cpw_pal_b_g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(1, 0),
+	});
+
+	-- Palette selector dot
+	GUI["cpw_pal_sel"] = Instance.new("Frame", GUI["cpw_pal"]);
+	GUI["cpw_pal_sel"]["BackgroundTransparency"] = 1;
+	GUI["cpw_pal_sel"]["BorderSizePixel"] = 0;
+	GUI["cpw_pal_sel"]["Position"] = UDim2.new(0.9, 0, 0, 0);
+	GUI["cpw_pal_sel"]["Size"] = UDim2.new(0, 10, 0, 10);
+	GUI["cpw_pal_sel"]["ZIndex"] = 52;
+	GUI["cpw_pal_sel"]["Name"] = [[Selector]];
+
+	local cpw_pal_sel_c = Instance.new("UICorner", GUI["cpw_pal_sel"]);
+	cpw_pal_sel_c.CornerRadius = UDim.new(0, 4);
+
+	local cpw_pal_sel_s = Instance.new("UIStroke", GUI["cpw_pal_sel"]);
+	cpw_pal_sel_s.Color = Color3.fromRGB(255, 255, 255);
+	cpw_pal_sel_s.Transparency = 0;
+	cpw_pal_sel_s.Thickness = 2;
+
+	-- Hue strip (vertical rainbow)
+	GUI["cpw_hue"] = Instance.new("Frame", GUI["cpw"]);
+	GUI["cpw_hue"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	GUI["cpw_hue"]["BorderSizePixel"] = 0;
+	GUI["cpw_hue"]["Position"] = UDim2.new(0, 124, 0, 10);
+	GUI["cpw_hue"]["Size"] = UDim2.new(0, 12, 0, 106);
+	GUI["cpw_hue"]["ZIndex"] = 51;
+	GUI["cpw_hue"]["Name"] = [[HueStrip]];
+
+	local cpw_hue_c = Instance.new("UICorner", GUI["cpw_hue"]);
+	cpw_hue_c.CornerRadius = UDim.new(0, 5);
+
+	local cpw_hue_g = Instance.new("UIGradient", GUI["cpw_hue"]);
+	cpw_hue_g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+		ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+		ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+		ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+		ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+	});
+	cpw_hue_g.Rotation = 90;
+
+	-- Hue knob
+	GUI["cpw_hue_k"] = Instance.new("Frame", GUI["cpw_hue"]);
+	GUI["cpw_hue_k"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	GUI["cpw_hue_k"]["BorderSizePixel"] = 0;
+	GUI["cpw_hue_k"]["Position"] = UDim2.new(0, 0, 0, 0);
+	GUI["cpw_hue_k"]["Size"] = UDim2.new(0, 12, 0, 9);
+	GUI["cpw_hue_k"]["ZIndex"] = 52;
+	GUI["cpw_hue_k"]["Name"] = [[Knob]];
+
+	local cpw_hue_k_c = Instance.new("UICorner", GUI["cpw_hue_k"]);
+	cpw_hue_k_c.CornerRadius = UDim.new(0, 4);
+
+	local cpw_hue_k_s = Instance.new("UIStroke", GUI["cpw_hue_k"]);
+	cpw_hue_k_s.Color = Color3.fromRGB(30, 30, 38);
+	cpw_hue_k_s.Transparency = 0;
+	cpw_hue_k_s.Thickness = 2;
+
+	-- Alpha bar
+	GUI["cpw_alpha"] = Instance.new("Frame", GUI["cpw"]);
+	GUI["cpw_alpha"]["BackgroundColor3"] = Color3.fromRGB(42, 42, 52);
+	GUI["cpw_alpha"]["BorderSizePixel"] = 0;
+	GUI["cpw_alpha"]["ClipsDescendants"] = true;
+	GUI["cpw_alpha"]["Position"] = UDim2.new(0, 10, 0, 124);
+	GUI["cpw_alpha"]["Size"] = UDim2.new(0, 126, 0, 10);
+	GUI["cpw_alpha"]["ZIndex"] = 51;
+	GUI["cpw_alpha"]["Name"] = [[AlphaBar]];
+
+	local cpw_alpha_c = Instance.new("UICorner", GUI["cpw_alpha"]);
+	cpw_alpha_c.CornerRadius = UDim.new(0, 6);
+
+	-- Checkerboard pattern for alpha bar
+	local cpw_alpha_chk = Instance.new("ImageLabel", GUI["cpw_alpha"]);
+	cpw_alpha_chk.Name = [[Checkers]];
+	cpw_alpha_chk.BackgroundTransparency = 1;
+	cpw_alpha_chk.BorderSizePixel = 0;
+	cpw_alpha_chk.Image = [[rbxassetid://18274452449]];
+	cpw_alpha_chk.ImageColor3 = Color3.fromRGB(255, 255, 255);
+	cpw_alpha_chk.ImageTransparency = 0.6;
+	cpw_alpha_chk.ScaleType = Enum.ScaleType.Tile;
+	cpw_alpha_chk.TileSize = UDim2.new(0, 6, 0, 6);
+	cpw_alpha_chk.Size = UDim2.new(1, 0, 1, 0);
+	cpw_alpha_chk.ZIndex = 51;
+
+	-- Alpha ramp (color gradient)
+	GUI["cpw_alpha_ramp"] = Instance.new("Frame", GUI["cpw_alpha"]);
+	GUI["cpw_alpha_ramp"]["BackgroundColor3"] = Color3.fromRGB(28, 108, 221);
+	GUI["cpw_alpha_ramp"]["BorderSizePixel"] = 0;
+	GUI["cpw_alpha_ramp"]["Size"] = UDim2.new(1, 0, 1, 0);
+	GUI["cpw_alpha_ramp"]["ZIndex"] = 51;
+	GUI["cpw_alpha_ramp"]["Name"] = [[Ramp]];
+
+	local cpw_alpha_ramp_c = Instance.new("UICorner", GUI["cpw_alpha_ramp"]);
+	cpw_alpha_ramp_c.CornerRadius = UDim.new(0, 6);
+
+	local cpw_alpha_ramp_g = Instance.new("UIGradient", GUI["cpw_alpha_ramp"]);
+	cpw_alpha_ramp_g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(1, 0),
+	});
+
+	-- Alpha knob
+	GUI["cpw_alpha_k"] = Instance.new("Frame", GUI["cpw_alpha"]);
+	GUI["cpw_alpha_k"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	GUI["cpw_alpha_k"]["BorderSizePixel"] = 0;
+	GUI["cpw_alpha_k"]["Position"] = UDim2.new(0.93, 0, 0, 0);
+	GUI["cpw_alpha_k"]["Size"] = UDim2.new(0, 9, 0, 10);
+	GUI["cpw_alpha_k"]["ZIndex"] = 52;
+	GUI["cpw_alpha_k"]["Name"] = [[Knob]];
+
+	local cpw_alpha_k_c = Instance.new("UICorner", GUI["cpw_alpha_k"]);
+	cpw_alpha_k_c.CornerRadius = UDim.new(0, 4);
+
+	local cpw_alpha_k_s = Instance.new("UIStroke", GUI["cpw_alpha_k"]);
+	cpw_alpha_k_s.Color = Color3.fromRGB(30, 30, 38);
+	cpw_alpha_k_s.Transparency = 0;
+	cpw_alpha_k_s.Thickness = 2;
+
+	-- Hex input field
+	GUI["cpw_hex"] = Instance.new("Frame", GUI["cpw"]);
+	GUI["cpw_hex"]["BorderSizePixel"] = 0;
+	GUI["cpw_hex"]["BackgroundColor3"] = Color3.fromRGB(22, 23, 31);
+	GUI["cpw_hex"]["Position"] = UDim2.new(0, 10, 0, 142);
+	GUI["cpw_hex"]["Size"] = UDim2.new(0, 126, 0, 24);
+	GUI["cpw_hex"]["ZIndex"] = 51;
+	GUI["cpw_hex"]["Name"] = [[HexField]];
+
+	local cpw_hex_c = Instance.new("UICorner", GUI["cpw_hex"]);
+	cpw_hex_c.CornerRadius = UDim.new(0, 6);
+
+	GUI["cpw_hex_v"] = Instance.new("TextBox", GUI["cpw_hex"]);
+	GUI["cpw_hex_v"]["BackgroundTransparency"] = 1;
+	GUI["cpw_hex_v"]["Position"] = UDim2.new(0, 9, 0, 0);
+	GUI["cpw_hex_v"]["Size"] = UDim2.new(0, 108, 0, 24);
+	GUI["cpw_hex_v"]["ZIndex"] = 51;
+	GUI["cpw_hex_v"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+	GUI["cpw_hex_v"]["Text"] = [[1C6CDDFF]];
+	GUI["cpw_hex_v"]["TextColor3"] = Color3.fromRGB(244, 244, 248);
+	GUI["cpw_hex_v"]["TextSize"] = 11;
+	GUI["cpw_hex_v"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["cpw_hex_v"]["ClearTextOnFocus"] = false;
+	GUI["cpw_hex_v"]["Name"] = [[Value]];
+
+	-- ColorPicker state and logic
+	GUI.ColorPickerState = {
+		hue = 0.6,
+		saturation = 0.87,
+		value = 0.87,
+		alpha = 1,
+		isOpen = false,
+		currentTarget = nil, -- { swatch, callback, flag }
+	}
+
+	local cpState = GUI.ColorPickerState
+
+	local function cpCurrentColor()
+		return Color3.fromHSV(cpState.hue, cpState.saturation, cpState.value)
+	end
+
+	local function cpCurrentHex()
+		local color = cpCurrentColor()
+		return string.format('%02X%02X%02X%02X',
+			math.floor(color.R * 255 + 0.5),
+			math.floor(color.G * 255 + 0.5),
+			math.floor(color.B * 255 + 0.5),
+			math.floor(cpState.alpha * 255 + 0.5))
+	end
+
+	local function cpRender()
+		local color = cpCurrentColor()
+
+		TweenService:Create(GUI["cpw_pal"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			BackgroundColor3 = Color3.fromHSV(cpState.hue, 1, 1)
+		}):Play()
+		TweenService:Create(GUI["cpw_pal_sel"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			Position = UDim2.new(math.min(cpState.saturation, 0.92), 0, math.min(1 - cpState.value, 0.92), 0)
+		}):Play()
+		TweenService:Create(GUI["cpw_hue_k"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			Position = UDim2.new(0, 0, math.min(cpState.hue, 0.92), 0)
+		}):Play()
+		TweenService:Create(GUI["cpw_alpha_k"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			Position = UDim2.new(math.min(cpState.alpha, 0.93), 0, 0, 0)
+		}):Play()
+		TweenService:Create(GUI["cpw_alpha_ramp"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			BackgroundColor3 = color
+		}):Play()
+
+		GUI["cpw_hex_v"].Text = cpCurrentHex()
+
+		if cpState.currentTarget then
+			TweenService:Create(cpState.currentTarget.swatch, TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				BackgroundColor3 = color
+			}):Play()
+			if cpState.currentTarget.callback then
+				cpState.currentTarget.callback(color)
+			end
+			if cpState.currentTarget.flag then
+				Library.Flags[cpState.currentTarget.flag] = color
+				Library.save_flags()
+			end
+		end
+	end
+
+	local function cpClose()
+		cpState.isOpen = false
+		cpState.currentTarget = nil
+		TweenService:Create(GUI["cpw_sh"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+		local closeTween = TweenService:Create(GUI["cpw"], TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, 0, 0, 0)
+		})
+		closeTween.Completed:Once(function()
+			GUI["cpw"].Visible = false
+		end)
+		closeTween:Play()
+	end
+
+	GUI.closeColorPicker = cpClose
+
+	local function cpOpen(swatch, callback, flag)
+		if GUI["cpw"].Visible and cpState.currentTarget and cpState.currentTarget.swatch == swatch then
+			cpClose()
+			return
+		end
+
+		cpState.isOpen = true
+		cpState.currentTarget = {
+			swatch = swatch,
+			callback = callback,
+			flag = flag,
+		}
+
+		-- Initialize from current swatch color
+		local currentColor = swatch.BackgroundColor3
+		cpState.hue, cpState.saturation, cpState.value = currentColor:ToHSV()
+		cpState.alpha = 1
+
+		-- Position relative to swatch (recalculated each open, follows the main window when dragged)
+		local swatchPos = swatch.AbsolutePosition
+		local parentPos = GUI["1"].AbsolutePosition
+		local swatchSize = swatch.AbsoluteSize
+
+		local pickerWidth = 150
+		local pickerHeight = 178
+		local pickerX = (swatchPos.X - parentPos.X) - pickerWidth - 8
+		local pickerY = (swatchPos.Y - parentPos.Y) - (pickerHeight - swatchSize.Y) / 2
+
+		GUI["cpw"].Position = UDim2.new(0, pickerX, 0, pickerY)
+
+		GUI["cpw"].Size = UDim2.new(0, 0, 0, 0)
+		GUI["cpw"].Visible = true
+
+		TweenService:Create(GUI["cpw_sh"], TweenInfo.new(0.2), {Transparency = 0.55}):Play()
+		TweenService:Create(GUI["cpw"], TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, 150, 0, 178)
+		}):Play()
+
+		cpRender()
+	end
+
+	GUI.openColorPicker = cpOpen
+
+	-- Palette drag interaction
+	local cpPaletteDragging = false
+	local cpPaletteHit = Instance.new("TextButton", GUI["cpw_pal"]);
+	cpPaletteHit.AutoButtonColor = false;
+	cpPaletteHit.ZIndex = 53;
+	cpPaletteHit.BackgroundTransparency = 1;
+	cpPaletteHit.Size = UDim2.new(1, 0, 1, 0);
+	cpPaletteHit.Text = [[]];
+	cpPaletteHit.Name = [[Hit]];
+
+	local function cpUpdatePalette(inputPos)
+		local palPos = GUI["cpw_pal"].AbsolutePosition
+		local palSize = GUI["cpw_pal"].AbsoluteSize
+		cpState.saturation = math.clamp((inputPos.X - palPos.X) / math.max(1, palSize.X), 0, 1)
+		cpState.value = 1 - math.clamp((inputPos.Y - palPos.Y) / math.max(1, palSize.Y), 0, 1)
+		cpRender()
+	end
+
+	cpPaletteHit.MouseButton1Down:Connect(function()
+		cpPaletteDragging = true
+		cpUpdatePalette(UserInputService:GetMouseLocation())
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if cpPaletteDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			cpUpdatePalette(input.Position)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			cpPaletteDragging = false
+		end
+	end)
+
+	-- Hue strip drag interaction
+	local cpHueDragging = false
+	local cpHueHit = Instance.new("TextButton", GUI["cpw_hue"]);
+	cpHueHit.AutoButtonColor = false;
+	cpHueHit.ZIndex = 53;
+	cpHueHit.BackgroundTransparency = 1;
+	cpHueHit.Size = UDim2.new(1, 0, 1, 0);
+	cpHueHit.Text = [[]];
+	cpHueHit.Name = [[Hit]];
+
+	local function cpUpdateHue(inputPos)
+		local huePos = GUI["cpw_hue"].AbsolutePosition
+		local hueSize = GUI["cpw_hue"].AbsoluteSize
+		cpState.hue = math.clamp((inputPos.Y - huePos.Y) / math.max(1, hueSize.Y), 0, 0.999)
+		cpRender()
+	end
+
+	cpHueHit.MouseButton1Down:Connect(function()
+		cpHueDragging = true
+		cpUpdateHue(UserInputService:GetMouseLocation())
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if cpHueDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			cpUpdateHue(input.Position)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			cpHueDragging = false
+		end
+	end)
+
+	-- Alpha bar drag interaction
+	local cpAlphaDragging = false
+	local cpAlphaHit = Instance.new("TextButton", GUI["cpw_alpha"]);
+	cpAlphaHit.AutoButtonColor = false;
+	cpAlphaHit.ZIndex = 53;
+	cpAlphaHit.BackgroundTransparency = 1;
+	cpAlphaHit.Size = UDim2.new(1, 0, 1, 0);
+	cpAlphaHit.Text = [[]];
+	cpAlphaHit.Name = [[Hit]];
+
+	local function cpUpdateAlpha(inputPos)
+		local alphaPos = GUI["cpw_alpha"].AbsolutePosition
+		local alphaSize = GUI["cpw_alpha"].AbsoluteSize
+		cpState.alpha = math.clamp((inputPos.X - alphaPos.X) / math.max(1, alphaSize.X), 0, 1)
+		cpRender()
+	end
+
+	cpAlphaHit.MouseButton1Down:Connect(function()
+		cpAlphaDragging = true
+		cpUpdateAlpha(UserInputService:GetMouseLocation())
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if cpAlphaDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			cpUpdateAlpha(input.Position)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			cpAlphaDragging = false
+		end
+	end)
+
+	-- Hex input handling
+	GUI["cpw_hex_v"].FocusLost:Connect(function()
+		local hex = GUI["cpw_hex_v"].Text:gsub('#', ''):upper()
+		local r, g, b, a = hex:match('^(%x%x)(%x%x)(%x%x)(%x?%x?)$')
+		if r then
+			local color = Color3.fromRGB(tonumber(r, 16), tonumber(g, 16), tonumber(b, 16))
+			cpState.hue, cpState.saturation, cpState.value = color:ToHSV()
+			cpState.alpha = if a ~= '' then tonumber(a, 16) / 255 else 1
+		end
+		cpRender()
+	end)
+
+	-- Click-outside detection for color picker
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			if GUI["cpw"].Visible and cpState.isOpen and cpState.currentTarget then
+				local mousePos = input.Position
+				local popupRect = GUI["cpw"].AbsolutePosition
+				local popupSize = GUI["cpw"].AbsoluteSize
+				local swatchRect = cpState.currentTarget.swatch.AbsolutePosition
+				local swatchSize = cpState.currentTarget.swatch.AbsoluteSize
+
+				local inPopup = mousePos.X >= popupRect.X and mousePos.X <= popupRect.X + popupSize.X
+					and mousePos.Y >= popupRect.Y and mousePos.Y <= popupRect.Y + popupSize.Y
+				local inSwatch = mousePos.X >= swatchRect.X - 8 and mousePos.X <= swatchRect.X + swatchSize.X + 8
+					and mousePos.Y >= swatchRect.Y - 8 and mousePos.Y <= swatchRect.Y + swatchSize.Y + 8
+
+				if not inPopup and not inSwatch then
+					cpClose()
+				end
+			end
+		end
+	end)
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.breadcrumb
+	GUI["2b"] = Instance.new("Frame", GUI["2"]);
+	GUI["2b"]["BorderSizePixel"] = 0;
+	GUI["2b"]["BackgroundColor3"] = Color3.fromRGB(27, 27, 34);
+	GUI["2b"]["Size"] = UDim2.new(1, -158, 0, 22);
+	GUI["2b"]["Position"] = UDim2.new(0, 158, 0, 62);
+	GUI["2b"]["Name"] = [[breadcrumb]];
+	GUI["2b"]["BackgroundTransparency"] = 1;
+	-- Attributes
+	GUI["2b"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.breadcrumb.IMG_BreadcrumbIcon
+	GUI["2c"] = Instance.new("ImageLabel", GUI["2b"]);
+	GUI["2c"]["BorderSizePixel"] = 0;
+	GUI["2c"]["ScaleType"] = Enum.ScaleType.Fit;
+	-- GUI["2c"]["Image"] = [[rbxassetid://10734977012]];
+
+	local Chevron = Library:GetIcon("chevron-right")
+	local Button = GUI["2c"]
+
+	if Chevron then
+		Button.Image = Chevron.Url
+		Button.ImageRectOffset = Chevron.ImageRectOffset
+		Button.ImageRectSize = Chevron.ImageRectSize
+	end
+
+	GUI["2c"]["Size"] = UDim2.new(0, 15, 0, 15);
+	GUI["2c"]["BackgroundTransparency"] = 1;
+	GUI["2c"]["Name"] = [[IMG_BreadcrumbIcon]];
+	GUI["2c"]["Position"] = UDim2.new(0, 8, 0, 3);
+	-- Attributes
+	GUI["2c"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["2c"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.breadcrumb.Section
+	GUI["2d"] = Instance.new("TextLabel", GUI["2b"]);
+	GUI["2d"]["TextSize"] = 12;
+	GUI["2d"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["2d"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["2d"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+	GUI["2d"]["BackgroundTransparency"] = 1;
+	GUI["2d"]["Size"] = UDim2.new(0, 48, 0, 22);
+	GUI["2d"]["Text"] = [[Blatant]];
+	GUI["2d"]["Name"] = [[Section]];
+	-- GUI["2d"]["Position"] = UDim2.new(0, 30, 0, 0);
+	GUI["2d"].Position = UDim2.new(0, 25, 0, 0)
+	-- Attributes
+	GUI["2d"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["2d"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.breadcrumb.Arrow
+	GUI["2e"] = Instance.new("TextLabel", GUI["2b"]);
+	GUI["2e"]["TextSize"] = 18;
+	GUI["2e"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["2e"]["TextColor3"] = Color3.fromRGB(106, 106, 117);
+	GUI["2e"]["BackgroundTransparency"] = 1;
+	GUI["2e"]["Size"] = UDim2.new(0, 25, 0, 26);
+	GUI["2e"]["Text"] = [[]];
+	GUI["2e"]["Name"] = [[Arrow]];
+	GUI["2e"]["Position"] = UDim2.new(0, 72, 0, -4);
+	-- Attributes
+	GUI["2e"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["2e"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.breadcrumb.Arrow.ImageLabel
+	GUI["2f"] = Instance.new("ImageLabel", GUI["2e"]);
+	GUI["2f"]["BorderSizePixel"] = 0;
+	GUI["2f"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	GUI["2f"]["Image"] = [[rbxassetid://10709768347]];
+	GUI["2f"]["Size"] = UDim2.new(0, 13, 0, 13);
+	GUI["2f"]["BackgroundTransparency"] = 1;
+	GUI["2f"]["Position"] = UDim2.new(0.28, 0, 0.30769, 0);
+	-- Attributes
+	GUI["2f"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	GUI["2f"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.breadcrumb.Element
+	GUI["31"] = Instance.new("TextLabel", GUI["2b"]);
+	GUI["31"]["TextSize"] = 12;
+	GUI["31"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["31"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["31"]["TextColor3"] = Color3.fromRGB(207, 207, 216);
+	GUI["31"]["BackgroundTransparency"] = 1;
+	GUI["31"]["Size"] = UDim2.new(0, 120, 0, 22);
+	GUI["31"]["Text"] = [[Automation]];
+	GUI["31"]["Name"] = [[Element]];
+	-- GUI["31"]["Position"] = UDim2.new(0, 97, 0, 0);
+	GUI["31"]["Position"] = UDim2.new(0, 91, 0, 0)
+	-- Attributes
+	GUI["31"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["31"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.breadcrumb.Arrow.ImageLabel.UIAspectRatioConstraint
+	GUI["30"] = Instance.new("UIAspectRatioConstraint", GUI["2f"]);
+
+	-- Auto-adjust breadcrumb layout based on text length
+	local BreadcrumbIcon = GUI["2c"]
+	local BreadcrumbSection = GUI["2d"]
+	local BreadcrumbArrow = GUI["2e"]
+	local BreadcrumbElement = GUI["31"]
+
+	local ICON_X = 8
+	local ICON_SIZE = 15
+	local SECTION_GAP = 2  -- gap after icon before section text
+	local ARROW_GAP = 2   -- gap after section text before arrow
+	local ARROW_WIDTH = 20
+	local ELEMENT_GAP = 4  -- gap after arrow before element text
+
+	local function updateBreadcrumbLayout()
+		-- TextBounds returns already-scaled pixel values, but these offsets are
+		-- applied inside the UIScale frame, so they'd be scaled again. Dividing
+		-- by the target uiScale compensates for the double-scaling.
+		-- We use _targetScale (not the live Scale) because the UIScale tweens
+		-- from 0 on open, and using the live value during the tween would
+		-- cause division by zero or incorrect positions.
+		local uiScale = GUI._targetScale or 1
+		if uiScale <= 0 then uiScale = 1 end
+
+		local sectionX = ICON_X + ICON_SIZE + SECTION_GAP
+		local sectionWidth = math.max(math.ceil(BreadcrumbSection.TextBounds.X / uiScale), 1)
+		BreadcrumbSection.Size = UDim2.new(0, sectionWidth, 0, 22)
+		BreadcrumbSection.Position = UDim2.new(0, sectionX, 0, 0)
+
+		local arrowX = sectionX + sectionWidth + ARROW_GAP
+		BreadcrumbArrow.Position = UDim2.new(0, arrowX, 0, -4)
+
+		local elementX = arrowX + ARROW_WIDTH + ELEMENT_GAP
+		local elementWidth = math.max(math.ceil(BreadcrumbElement.TextBounds.X / uiScale), 1)
+		BreadcrumbElement.Size = UDim2.new(0, elementWidth, 0, 22)
+		BreadcrumbElement.Position = UDim2.new(0, elementX, 0, 0)
+	end
+
+	BreadcrumbSection:GetPropertyChangedSignal("TextBounds"):Connect(updateBreadcrumbLayout)
+	BreadcrumbElement:GetPropertyChangedSignal("TextBounds"):Connect(updateBreadcrumbLayout)
+
+	-- Ensure initial layout is correct (fixes mobile overlap on first render)
+	task.defer(updateBreadcrumbLayout)
+
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.MainTitle
+	GUI["32"] = Instance.new("TextLabel", GUI["2"]);
+	GUI["32"]["TextSize"] = 13;
+	GUI["32"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["32"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["32"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["32"]["BackgroundTransparency"] = 1;
+	GUI["32"]["Size"] = UDim2.new(0, 200, 0, 16);
+	GUI["32"]["Text"] = [[Auto Parry]];
+	GUI["32"]["Name"] = [[MainTitle]];
+	GUI["32"]["Position"] = UDim2.new(0, 166, 0, 92);
+	-- Attributes
+	GUI["32"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["32"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.ExtraTitle
+	GUI["33"] = Instance.new("TextLabel", GUI["2"]);
+	GUI["33"]["TextSize"] = 13;
+	GUI["33"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	GUI["33"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	GUI["33"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+	GUI["33"]["BackgroundTransparency"] = 1;
+	GUI["33"]["Size"] = UDim2.new(0, 200, 0, 16);
+	GUI["33"]["Text"] = [[Extras]];
+	GUI["33"]["Name"] = [[ExtraTitle]];
+	GUI["33"]["Position"] = UDim2.new(0, 444, 0, 92);
+	-- Attributes
+	GUI["33"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	GUI["33"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	local UIS = game:GetService("UserInputService")
+
+	local Main_GUI = GUI["1"]
+	local Scale = GUI["4"]
+
+	local Tween_Time = 0.65
+	local Tween_In = TweenService:Create(
+		Scale,
+		TweenInfo.new(Tween_Time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut),
+		{ Scale = 1 }
+	)
+
+	local Tween_Out = TweenService:Create(
+		Scale,
+		TweenInfo.new(Tween_Time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut),
+		{ Scale = 0 }
+	)
+
+	UIS.InputBegan:Connect(function(input, gp)
+		if gp then
+			return
+		end
+
+		if input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.RightAlt or input.KeyCode == Enum.KeyCode.LeftAlt then
+			if Main_GUI.Enabled then
+				Tween_Out:Play()
+				Tween_Out.Completed:Wait()
+				Main_GUI.Enabled = false
+			else
+				Main_GUI.Enabled = true
+				Tween_In:Play()
+			end
+		end
+	end)
+
+	do
+		local Frame = GUI["2"] -- Main_Menu_Window
+
+		local Dragging = false
+		local DragStart, StartPos
+
+		Frame.Active = true
+		Frame.Selectable = true
+
+		local function BeginDrag(input)
+			Dragging = true
+			DragStart = input.Position
+			StartPos = Frame.Position
+		end
+
+		local function EndDrag()
+			Dragging = false
+		end
+
+		Frame.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.Touch then
+				BeginDrag(input)
+			end
+		end)
+
+		Frame.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.Touch then
+				EndDrag()
+			end
+		end)
+
+		UIS.InputChanged:Connect(function(input)
+			if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+				or input.UserInputType == Enum.UserInputType.Touch) then
+
+				local delta = input.Position - DragStart
+
+				Frame.Position = UDim2.new(
+					StartPos.X.Scale,
+					StartPos.X.Offset + delta.X,
+					StartPos.Y.Scale,
+					StartPos.Y.Offset + delta.Y
+				)
+			end
+		end)
+
+		--[[
+		GUI["2a"].MouseButton1Click:Connect(function()
+			GUI["ef"].Visible = not GUI["ef"].Visible
+		end)
+		]]
+
+		local function Tween(frame, props)
+			local tween = TweenService:Create(
+				frame,
+				TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+				props
+			)
+			tween:Play()
+			return tween
+		end
+
+		GUI["2a"].MouseButton1Click:Connect(function()
+			local frame = GUI["ef"]
+
+			frame.Visible = not frame.Visible
+
+			if frame.Visible then
+				if GUI.RefreshPresets then
+					GUI.RefreshPresets()
+					local targetSize = frame.Size
+					frame.Size = UDim2.new(0, 236, 0, 0)
+					Tween(frame, {
+						Size = targetSize;
+					})
+				else
+					Tween(frame, {
+						Size = UDim2.new(0, 236, 0, 490);
+					})
+				end
+			else
+				Tween(frame, {
+					Size = UDim2.new(0, 0, 0, 0)
+				})
+			end
+		end)
+	end
+
+	-- Search functionality
+	do
+		local SearchInput = GUI["24"]
+		local SearchPlaceholder = GUI["23"]
+		local SearchStroke = GUI["25"]
+		local searchDebounce = 0
+
+		-- Create scrolling frames for search results to prevent overflow
+		local searchScrollLeft = Instance.new("ScrollingFrame", GUI["2"])
+		searchScrollLeft.BorderSizePixel = 0
+		searchScrollLeft.BackgroundTransparency = 1
+		searchScrollLeft.Size = UDim2.new(0, 264, 0, 322)
+		searchScrollLeft.Position = UDim2.new(0, 166, 0, 118)
+		searchScrollLeft.ScrollBarThickness = 2
+		searchScrollLeft.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
+		-- searchScrollLeft.ScrollBarBackgroundTransparency = 1
+		searchScrollLeft.ClipsDescendants = true
+		searchScrollLeft.Visible = false
+		searchScrollLeft.CanvasSize = UDim2.new(0, 0, 0, 0)
+		searchScrollLeft.Name = "SearchScrollLeft"
+
+		local leftSearchLayout = Instance.new("UIListLayout", searchScrollLeft)
+		leftSearchLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		leftSearchLayout.Padding = UDim.new(0, 10)
+
+		local searchScrollRight = Instance.new("ScrollingFrame", GUI["2"])
+		searchScrollRight.BorderSizePixel = 0
+		searchScrollRight.BackgroundTransparency = 1
+		searchScrollRight.Size = UDim2.new(0, 264, 0, 322)
+		searchScrollRight.Position = UDim2.new(0, 444, 0, 118)
+		searchScrollRight.ScrollBarThickness = 2
+		searchScrollRight.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
+		-- searchScrollRight.ScrollBarBackgroundTransparency = 1
+		searchScrollRight.ClipsDescendants = true
+		searchScrollRight.Visible = false
+		searchScrollRight.CanvasSize = UDim2.new(0, 0, 0, 0)
+		searchScrollRight.Name = "SearchScrollRight"
+
+		local rightSearchLayout = Instance.new("UIListLayout", searchScrollRight)
+		rightSearchLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		rightSearchLayout.Padding = UDim.new(0, 10)
+
+		-- Update canvas size when content changes
+		leftSearchLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+			searchScrollLeft.CanvasSize = UDim2.new(0, 0, 0, leftSearchLayout.AbsoluteContentSize.Y)
+		end)
+		rightSearchLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+			searchScrollRight.CanvasSize = UDim2.new(0, 0, 0, rightSearchLayout.AbsoluteContentSize.Y)
+		end)
+
+		local function getWidgetName(child)
+			local label = child:FindFirstChild("Label", true)
+			if label and label:IsA("TextLabel") then
+				return label.Text
+			end
+			return child.Name
+		end
+
+		SearchInput.Focused:Connect(function()
+			TweenService:Create(SearchStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+		end)
+
+		SearchInput.FocusLost:Connect(function()
+			TweenService:Create(SearchStroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
+		end)
+
+		SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+			local query = string.lower(SearchInput.Text)
+			searchDebounce = searchDebounce + 1
+			local myDebounce = searchDebounce
+
+			if query == "" then
+				-- Restore normal behavior
+				SearchPlaceholder.Visible = true
+				searchScrollLeft.Visible = false
+				searchScrollRight.Visible = false
+
+				for _, tab in (GUI.Tabs) do
+					local containers = tab.AllContainers or {{container = tab.ContentContainer, section = tab.Section or 'left'}}
+					for _, entry in (containers) do
+						-- Restore parent to main window if it was reparented to a scroll frame
+						if entry.container.Parent ~= GUI["2"] then
+							entry.container.Parent = GUI["2"]
+						end
+
+						for _, child in (entry.container:GetChildren()) do
+							if child:IsA("GuiObject") then
+								child.Visible = true
+							end
+						end
+
+						local sec = entry.section
+						entry.container.Visible = (tab == GUI.CurrentTabs[sec])
+						entry.container.Position = UDim2.new(0, sec == 'right' and 444 or 166, 0, 118)
+					end
+				end
+			else
+				SearchPlaceholder.Visible = false
+				searchScrollLeft.Visible = true
+				searchScrollRight.Visible = true
+
+				local leftIndex = 0
+				local rightIndex = 0
+
+				for _, tab in (GUI.Tabs) do
+					local containers = tab.AllContainers or {{container = tab.ContentContainer, section = tab.Section or 'left'}}
+					for _, entry in (containers) do
+						local hasMatch = false
+						for _, child in (entry.container:GetChildren()) do
+							if child:IsA("GuiObject") then
+								local widgetName = getWidgetName(child)
+								if string.find(string.lower(widgetName), query) then
+									child.Visible = true
+									hasMatch = true
+								else
+									child.Visible = false
+								end
+							end
+						end
+						if hasMatch then
+							-- Reparent to scroll frame and let UIListLayout handle stacking
+							if entry.section == 'right' then
+								entry.container.Parent = searchScrollRight
+								entry.container.LayoutOrder = rightIndex
+								rightIndex = rightIndex + 1
+							else
+								entry.container.Parent = searchScrollLeft
+								entry.container.LayoutOrder = leftIndex
+								leftIndex = leftIndex + 1
+							end
+							entry.container.Position = UDim2.new(0, 0, 0, 0)
+							entry.container.Visible = true
+						else
+							-- Hide and restore parent to main window
+							entry.container.Visible = false
+							if entry.container.Parent ~= GUI["2"] then
+								entry.container.Parent = GUI["2"]
+							end
+						end
+					end
+				end
+			end
+		end)
+	end
+
+	do
+		local PresetsWindow     = GUI["ef"]
+		local SearchInput       = GUI["fc"]
+		local SortHit           = GUI["100"]
+		local SortIcon          = GUI["ff"]
+		local AddHit            = GUI["f7"]
+		local ConfigButtonLabel = GUI["28"]
+
+		local TweenService      = game:GetService("TweenService")
+
+		local DEFAULT_PRESETS = {
+			"Legit PvP",
+			"Rage HVH"
+		}
+
+		-- Colors tuned to match WINDS presets
+		local COLOR_ROW_BG_IDLE      = Color3.fromRGB(25, 24, 43)   -- idle row
+		local COLOR_ROW_BG_HOVER     = Color3.fromRGB(31, 30, 50)   -- hover row
+		local COLOR_ROW_BG_ACTIVE    = Color3.fromRGB(31, 30, 50)   -- active row fill
+		local COLOR_TEXT_IDLE        = Color3.fromRGB(150, 150, 161)
+		local COLOR_TEXT_ACTIVE      = Color3.fromRGB(243, 243, 247)
+		local COLOR_EDIT_IDLE        = Color3.fromRGB(120, 120, 131)
+		local COLOR_EDIT_ACTIVE      = Color3.fromRGB(150, 150, 161)
+		local COLOR_DELETE_IDLE      = Color3.fromRGB(120, 120, 131)
+		local COLOR_DELETE_ACTIVE    = Color3.fromRGB(224, 82, 76)
+		local COLOR_INDICATOR        = Color3.fromRGB(125, 109, 247)
+		local COLOR_SORT_IDLE        = Color3.fromRGB(150, 150, 161)
+		local COLOR_SORT_ACTIVE      = Color3.fromRGB(125, 109, 247)
+
+		local presets       = {}
+		local activePreset  = nil
+		local sortAscending = false
+		local applying      = false
+		local loading       = true
+
+		local indicator = Instance.new("ImageLabel")
+		indicator.Name = "indicator"
+		indicator.BackgroundTransparency = 1
+		indicator.BorderSizePixel = 0
+		indicator.Size = UDim2.new(0, 3, 0, 18)
+		indicator.Image = "rbxassetid://90362801488029"
+		indicator.ImageColor3 = COLOR_INDICATOR
+		indicator.ZIndex = 62
+
+		local function snapshotFlags()
+			local out = {}
+			for k, v in Library.Flags do
+				if type(v) == "table" then
+					local copy = {}
+					for k2, v2 in v do
+						copy[k2] = v2
+					end
+					out[k] = copy
+				else
+					out[k] = v
+				end
+			end
+			return out
+		end
+
+		local function applyFlags(flags)
+			if not flags then return end
+			-- Clear existing flags except __lastPreset so each preset is independent
+			for k in pairs(Library.Flags) do
+				if k ~= "__lastPreset" then
+					Library.Flags[k] = nil
+				end
+			end
+			-- Apply the new preset's flags
+			for k, v in flags do
+				Library.Flags[k] = v
+			end
+		end
+
+		local function serializeFlags(flags)
+			local out = {}
+			for k, v in pairs(flags) do
+				if k == "__lastPreset" then continue end
+				if typeof(v) == "Color3" then
+					out[k] = {__type = "Color3", R = v.R, G = v.G, B = v.B}
+				else
+					out[k] = v
+				end
+			end
+			return out
+		end
+
+		local function deserializeFlags(data)
+			if not data then return {} end
+			local out = {}
+			for k, v in pairs(data) do
+				if type(v) == "table" and v.__type == "Color3" then
+					out[k] = Color3.new(v.R or 0, v.G or 0, v.B or 0)
+				elseif type(v) == "table" and v.R ~= nil and v.G ~= nil and v.B ~= nil and v.A == nil and v.__type == nil and v.keyName == nil then
+					out[k] = Color3.new(v.R, v.G, v.B)
+				else
+					out[k] = v
+				end
+			end
+			return out
+		end
+
+		local function scheduleSave()
+			if loading then return end
+
+			for _, preset in presets do
+				local data = serializeFlags(preset.flags or {})
+				Library:save_preset(preset.name, data)
+			end
+
+			if activePreset then
+				Library.Flags.__lastPreset = activePreset.name
+			else
+				Library.Flags.__lastPreset = nil
+			end
+			Library.save_flags()
+		end
+
+		local function renderRows()
+			local query   = string.lower(SearchInput.Text or "")
+			local visible = {}
+
+			for _, preset in presets do
+				if query == "" or string.find(string.lower(preset.name), query, 1, true) then
+					table.insert(visible, preset)
+				end
+			end
+
+			if sortAscending then
+				table.sort(visible, function(a, b)
+					return string.lower(a.name) < string.lower(b.name)
+				end)
+			end
+
+			for _, preset in presets do
+				preset.row.Visible = false
+			end
+
+			for index, preset in visible do
+				preset.row.Visible = true
+				preset.row.Position = UDim2.new(0, 14, 0, 98 + (index - 1) * 42)
+			end
+
+			PresetsWindow.Size = UDim2.new(0, 236, 0, math.max(300, 98 + #visible * 42 + 14))
+		end
+
+		GUI.RefreshPresets = renderRows
+
+		local function renderStates()
+			for _, preset in presets do
+				local selected = (preset == activePreset)
+
+				TweenService:Create(
+					preset.row,
+					TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+					{
+						BackgroundTransparency = selected and 0 or 0.1,
+						BackgroundColor3       = selected and COLOR_ROW_BG_ACTIVE or COLOR_ROW_BG_IDLE,
+					}
+				):Play()
+
+				preset.nameLabel.FontFace   = Font.new(
+					"rbxasset://fonts/families/Montserrat.json",
+					selected and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium,
+					Enum.FontStyle.Normal
+				)
+				preset.nameLabel.TextColor3 = selected and COLOR_TEXT_ACTIVE or COLOR_TEXT_IDLE
+
+				preset.editIcon.ImageColor3   = selected and COLOR_EDIT_ACTIVE or COLOR_EDIT_IDLE
+				preset.deleteIcon.ImageColor3 = selected and COLOR_DELETE_ACTIVE or COLOR_DELETE_IDLE
+			end
+
+			if activePreset and indicator.Parent ~= nil then
+				indicator.Parent = activePreset.row
+				indicator.Position = UDim2.new(0, 0, 0, 8)
+				ConfigButtonLabel.Text = activePreset.name
+			end
+		end
+
+		local function selectPreset(preset)
+			if activePreset == preset then return end
+
+			if activePreset then
+				activePreset.flags = snapshotFlags()
+			end
+
+			activePreset = preset
+			GUI.ApplyingPreset = true
+
+			-- Phase 1: Turn off all toggle flags so nothing from the old preset interacts with the new one
+			for k, v in pairs(Library.Flags) do
+				if k ~= "__lastPreset" and type(v) == "boolean" then
+					Library.Flags[k] = false
+				end
+			end
+			for _, refresh in ipairs(GUI.Widgets) do
+				refresh()
+			end
+
+			-- Phase 2: Apply the new preset's flags and refresh all widgets
+			applyFlags(preset.flags)
+			for _, refresh in ipairs(GUI.Widgets) do
+				refresh()
+			end
+
+			GUI.ApplyingPreset = false
+
+			renderStates()
+			scheduleSave()
+		end
+
+		local function addPreset(name, flags, makeActive)
+			local row = Instance.new("Frame")
+			row.Name = "Config_" .. name:gsub("%s", "_")
+			row.Parent = PresetsWindow
+			row.BackgroundTransparency = 0.1
+			row.BackgroundColor3 = COLOR_ROW_BG_IDLE
+			row.BorderSizePixel = 0
+			row.Position = UDim2.new(0, 14, 0, 98)
+			row.Size = UDim2.new(0, 208, 0, 34)
+			row.ZIndex = 61
+
+			local corner = Instance.new("UICorner", row)
+			corner.CornerRadius = UDim.new(0, 8)
+
+			local nameLabel = Instance.new("TextLabel")
+			nameLabel.Name = "Name"
+			nameLabel.Parent = row
+			nameLabel.BackgroundTransparency = 1
+			nameLabel.Position = UDim2.new(0, 14, 0, 0)
+			nameLabel.Size = UDim2.new(0, 130, 0, 34)
+			nameLabel.ZIndex = 61
+			nameLabel.FontFace = Font.new(
+				"rbxasset://fonts/families/Montserrat.json",
+				Enum.FontWeight.Medium,
+				Enum.FontStyle.Normal
+			)
+			nameLabel.Text = name
+			nameLabel.TextColor3 = COLOR_TEXT_IDLE
+			nameLabel.TextSize = 12
+			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+			nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+
+			local editIcon = Instance.new("ImageLabel")
+			editIcon.Name = "IMG_Edit"
+			editIcon.Parent = row
+			editIcon.BackgroundTransparency = 1
+			editIcon.Position = UDim2.new(0, 150, 0, 9)
+			editIcon.Size = UDim2.new(0, 16, 0, 16)
+			editIcon.ZIndex = 61
+			editIcon.Image = "rbxassetid://131819263664272"
+			editIcon.ImageColor3 = COLOR_EDIT_IDLE
+			editIcon.ScaleType = Enum.ScaleType.Fit
+
+			local deleteIcon = Instance.new("ImageLabel")
+			deleteIcon.Name = "IMG_Delete"
+			deleteIcon.Parent = row
+			deleteIcon.BackgroundTransparency = 1
+			deleteIcon.Position = UDim2.new(0, 178, 0, 9)
+			deleteIcon.Size = UDim2.new(0, 16, 0, 16)
+			deleteIcon.ZIndex = 61
+			deleteIcon.Image = "rbxassetid://126010725826757"
+			deleteIcon.ImageColor3 = COLOR_DELETE_IDLE
+			deleteIcon.ScaleType = Enum.ScaleType.Fit
+
+			local preset = {
+				name       = name,
+				flags      = flags or snapshotFlags(),
+				row        = row,
+				nameLabel  = nameLabel,
+				editIcon   = editIcon,
+				deleteIcon = deleteIcon,
+			}
+
+			table.insert(presets, preset)
+
+			local selectHit = Instance.new("TextButton")
+			selectHit.Name = "Hit_Select"
+			selectHit.Parent = row
+			selectHit.AutoButtonColor = false
+			selectHit.BackgroundTransparency = 1
+			selectHit.Size = UDim2.new(0, 144, 1, 0)
+			selectHit.Position = UDim2.new(0, 0, 0, 0)
+			selectHit.ZIndex = 62
+			selectHit.Text = ""
+
+			selectHit.MouseEnter:Connect(function()
+				if preset ~= activePreset then
+					TweenService:Create(
+						row,
+						TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+						{ BackgroundColor3 = COLOR_ROW_BG_HOVER }
+					):Play()
+				end
+			end)
+
+			selectHit.MouseLeave:Connect(function()
+				if preset ~= activePreset then
+					TweenService:Create(
+						row,
+						TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+						{ BackgroundColor3 = COLOR_ROW_BG_IDLE }
+					):Play()
+				end
+			end)
+
+			selectHit.MouseButton1Click:Connect(function()
+				selectPreset(preset)
+			end)
+
+			local editHit = Instance.new("TextButton")
+			editHit.Name = "Hit_Edit"
+			editHit.Parent = row
+			editHit.AutoButtonColor = false
+			editHit.BackgroundTransparency = 1
+			editHit.Size = UDim2.new(0, 24, 0, 24)
+			editHit.Position = UDim2.new(0, 146, 0, 5)
+			editHit.ZIndex = 63
+			editHit.Text = ""
+
+			editHit.MouseButton1Click:Connect(function()
+				local box = Instance.new("TextBox")
+				box.Parent = row
+				box.BackgroundColor3 = COLOR_ROW_BG_ACTIVE
+				box.BorderSizePixel = 0
+				box.Position = UDim2.new(0, 10, 0, 5)
+				box.Size = UDim2.new(0, 132, 0, 24)
+				box.ZIndex = 64
+				box.FontFace = Font.new(
+					"rbxasset://fonts/families/Montserrat.json",
+					Enum.FontWeight.Medium,
+					Enum.FontStyle.Normal
+				)
+				box.Text = preset.name
+				box.TextColor3 = COLOR_TEXT_ACTIVE
+				box.TextSize = 12
+				box.TextXAlignment = Enum.TextXAlignment.Left
+				box.ClearTextOnFocus = false
+
+				local boxCorner = Instance.new("UICorner", box)
+				boxCorner.CornerRadius = UDim.new(0, 6)
+
+				box:CaptureFocus()
+				box.FocusLost:Connect(function()
+					local trimmed = box.Text:gsub("^%s+", ""):gsub("%s+$", "")
+					if trimmed ~= "" then
+						local oldName = preset.name
+						preset.name = trimmed
+						nameLabel.Text = trimmed
+						if preset == activePreset then
+							ConfigButtonLabel.Text = trimmed
+						end
+						if oldName ~= trimmed then
+							pcall(function()
+								delfile("Aries/Presets/" .. oldName .. ".json")
+							end)
+						end
+					end
+					box:Destroy()
+					renderRows()
+					scheduleSave()
+				end)
+			end)
+
+			local deleteHit = Instance.new("TextButton")
+			deleteHit.Name = "Hit_Delete"
+			deleteHit.Parent = row
+			deleteHit.AutoButtonColor = false
+			deleteHit.BackgroundTransparency = 1
+			deleteHit.Size = UDim2.new(0, 24, 0, 24)
+			deleteHit.Position = UDim2.new(0, 174, 0, 5)
+			deleteHit.ZIndex = 63
+			deleteHit.Text = ""
+
+			deleteHit.MouseButton1Click:Connect(function()
+				if #presets <= 1 then return end
+
+				for index, entry in presets do
+					if entry == preset then
+						table.remove(presets, index)
+						break
+					end
+				end
+
+				pcall(function()
+					delfile("Aries/Presets/" .. preset.name .. ".json")
+				end)
+
+				if indicator.Parent == row then
+					indicator.Parent = nil
+				end
+				row:Destroy()
+
+				if activePreset == preset then
+					activePreset = nil
+					if presets[1] then
+						selectPreset(presets[1])
+					else
+						ConfigButtonLabel.Text = "Config 1"
+					end
+				end
+
+				renderRows()
+				scheduleSave()
+			end)
+
+			if makeActive then
+				activePreset = preset
+			end
+
+			renderRows()
+			renderStates()
+			scheduleSave()
+
+			return preset
+		end
+
+		-- Load presets from disk
+		local savedPresets = Library:list_presets()
+
+		if #savedPresets > 0 then
+			table.sort(savedPresets, function(a, b) return a < b end)
+
+			for _, name in savedPresets do
+				local data = Library:load_preset(name)
+				if data then
+					local flags = deserializeFlags(data)
+					addPreset(name, flags, false)
+				end
+			end
+
+			-- Presets are displayed in the UI but not auto-activated on startup
+		else
+			-- No saved presets, create defaults
+			for index, name in DEFAULT_PRESETS do
+				addPreset(name, nil, index == 1)
+			end
+		end
+
+		loading = false
+
+		SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+			renderRows()
+		end)
+
+		SortHit.MouseButton1Click:Connect(function()
+			sortAscending = not sortAscending
+
+			TweenService:Create(
+				SortIcon,
+				TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+				{
+					ImageColor3 = sortAscending and COLOR_SORT_ACTIVE or COLOR_SORT_IDLE
+				}
+			):Play()
+
+			renderRows()
+		end)
+
+		AddHit.MouseButton1Click:Connect(function()
+			local baseName = "Config " .. tostring(#presets + 1)
+			local newName  = baseName
+			local counter  = 1
+
+			local function nameTaken(n)
+				for _, p in presets do
+					if p.name == n then return true end
+				end
+				return false
+			end
+
+			while nameTaken(newName) do
+				counter += 1
+				newName = baseName .. " (" .. counter .. ")"
+			end
+
+			local preset = addPreset(newName, snapshotFlags(), true)
+			selectPreset(preset)
+		end)
+
+		renderRows()
+		renderStates()
+	end
+
+	return GUI
+end
+
+function Library:Create_Tab(options)
+	local Tab = {
+		Hover = false,
+		Active = false,
+		Section = 'left'
+	}
+
+	options = Library:validate({name = 'Preview Tab', section_name = 'Fallback', section = 'left', icon = 'rbxassetid://83752373575368'}, options or {})
+
+	Tab.Section = string.lower(options.section or 'left')
+
+	table.insert(GUI.Tabs, Tab)
+
+	if not GUI.CurrentTabs[Tab.Section] then
+		GUI.CurrentTabs[Tab.Section] = Tab
+	end
+
+	if GUI.CurrentTabs[Tab.Section] == Tab then
+		if Tab.Section == 'right' then
+			GUI["33"]["Text"] = options.name
+		else
+			GUI["31"]["Text"] = options.section_name or 'Fallback'
+			GUI["2d"]["Text"] = options.name
+			GUI["32"]["Text"] = options.name
+		end
+	end
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.Nav_Movement
+	--Tab["12"] = Instance.new("Frame", GUI["5"]);
+	Tab["12"] = Instance.new("Frame", GUI["TabContainer"])
+	Tab["12"]["BorderSizePixel"] = 0;
+	Tab["12"]["BackgroundColor3"] = Color3.fromRGB(21, 21, 26);
+	Tab["12"]["Size"] = UDim2.new(1, 0, 0, 25);
+	Tab["12"]["Position"] = UDim2.new(0, 0, 0, 90);
+	Tab["12"]["Name"] = options.name;
+	Tab["12"]["BackgroundTransparency"] = 1;
+	-- Attributes
+	Tab["12"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.Nav_Movement.IMG_Icon
+	Tab["13"] = Instance.new("ImageLabel", Tab["12"]);
+	Tab["13"]["ZIndex"] = 2;
+	Tab["13"]["BorderSizePixel"] = 0;
+	Tab["13"]["ScaleType"] = Enum.ScaleType.Fit;
+	Tab["13"]["ImageColor3"] = Color3.fromRGB(143, 143, 154);
+
+	local Icon = Library:GetCustomIcon(options.icon)
+
+	if Icon then
+		local Button = Tab["13"]
+
+		Button.Image = Icon.Url
+		Button.ImageRectOffset = Icon.ImageRectOffset or Vector2.zero
+		Button.ImageRectSize = Icon.ImageRectSize or Vector2.zero
+	end
+
+	Tab["13"]["Size"] = UDim2.new(0, 14, 0, 14);
+	Tab["13"]["BackgroundTransparency"] = 1;
+	Tab["13"]["Name"] = [[IMG_Icon]];
+	Tab["13"]["Position"] = UDim2.new(0, 22, 0, 6);
+	-- Attributes
+	Tab["13"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+	Tab["13"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.Nav_Movement.Label
+	Tab["14"] = Instance.new("TextLabel", Tab["12"]);
+	Tab["14"]["ZIndex"] = 2;
+	Tab["14"]["TextSize"] = 12;
+	Tab["14"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	Tab["14"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+	Tab["14"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+	Tab["14"]["BackgroundTransparency"] = 1;
+	Tab["14"]["Size"] = UDim2.new(1, -50, 0, 26);
+	Tab["14"]["Text"] = options.name
+	Tab["14"]["Name"] = [[Label]];
+	Tab["14"]["Position"] = UDim2.new(0, 43, 0, 0);
+	Tab["14"]["TextScaled"] = true;
+	-- UITextSizeConstraint keeps tab text readable across all screen sizes
+	local TabTextConstraint = Instance.new("UITextSizeConstraint", Tab["14"]);
+	TabTextConstraint.MaxTextSize = 12;
+	TabTextConstraint.MinTextSize = 7;
+	-- Attributes
+	Tab["14"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	Tab["14"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.Nav_Movement.Hit
+	Tab["15"] = Instance.new("TextButton", Tab["12"]);
+	Tab["15"]["AutoButtonColor"] = false;
+	Tab["15"]["ZIndex"] = 3;
+	Tab["15"]["BackgroundTransparency"] = 1;
+	Tab["15"]["Size"] = UDim2.new(1, 0, 1, 0);
+	Tab["15"]["Text"] = [[]];
+	Tab["15"]["Name"] = [[Hit]];
+	-- Attributes
+	Tab["15"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+	Tab["15"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+	if GUI.CurrentTabs[Tab.Section] == Tab then
+		if Tab.Section == 'right' then
+			GUI["33"]["Text"] = options.name
+		else
+			GUI["31"]["Text"] = options.section_name or 'Fallback'
+			GUI["2d"]["Text"] = options.name
+			GUI["32"]["Text"] = options.name
+		end
+	end
+
+	-- Content container for tab widgets (sliders, etc.)
+	Tab.ContentContainer = Instance.new("Frame", GUI["2"])
+	Tab.ContentContainer.BorderSizePixel = 0
+	Tab.ContentContainer.BackgroundColor3 = Color3.fromRGB(14, 15, 20)
+	Tab.ContentContainer.AutomaticSize = Enum.AutomaticSize.Y
+	Tab.ContentContainer.Size = UDim2.new(0, 264, 0, 0)
+	Tab.ContentContainer.Position = UDim2.new(0, Tab.Section == 'right' and 444 or 166, 0, 118)
+	Tab.ContentContainer.Name = options.name .. "_content"
+	Tab.ContentContainer:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0)
+	Tab.ContentContainer.Visible = (GUI.CurrentTabs[Tab.Section] == Tab)
+
+	local ContentCorner = Instance.new("UICorner", Tab.ContentContainer)
+	ContentCorner.CornerRadius = UDim.new(0, 10)
+
+	local ContentShadow = Instance.new("UIShadow", Tab.ContentContainer)
+	ContentShadow:SetAttribute([[fadeOriginal_Transparency]], 0.55)
+
+	local ContentLayout = Instance.new("UIListLayout", Tab.ContentContainer)
+	ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	Tab.AllContainers = { {container = Tab.ContentContainer, section = Tab.Section} }
+
+	function Tab:Activate()
+		if not Tab.Active then
+			local sections = {}
+			for _, entry in (Tab.AllContainers) do
+				sections[entry.section] = true
+			end
+			for section, _ in pairs(sections) do
+				if GUI.CurrentTabs[section] ~= nil and GUI.CurrentTabs[section] ~= Tab then
+					GUI.CurrentTabs[section]:Deactivate()
+				end
+			end
+
+			Tab.Active = true
+			for _, entry in (Tab.AllContainers) do
+				GUI.CurrentTabs[entry.section] = Tab
+				entry.container.Visible = true
+			end
+		end
+	end
+
+	function Tab:Deactivate()
+		if Tab.Active then
+			Tab.Active = false
+			Tab.Hover = false
+			for _, entry in (Tab.AllContainers) do
+				entry.container.Visible = false
+			end
+		end
+	end
+
+	Tab['15'].MouseEnter:Connect(function()
+		Tab.Hover = true
+
+		if not Tab.Active then
+			if not GUI['e'].Visible then
+				GUI['e'].Visible = true
+			end
+
+			Tab["13"].ImageColor3 = Color3.fromRGB(200, 200, 200)
+			Tab["14"].TextColor3 = Color3.fromRGB(255, 255, 255)
+		end
+	end)
+
+	Tab['15'].MouseLeave:Connect(function()
+		local current = GUI.CurrentTabs[Tab.Section]
+		if current and current ~= Tab then
+			current.Active = false
+			current["13"].ImageColor3 = Color3.fromRGB(143, 143, 154)
+			current["14"].TextColor3 = Color3.fromRGB(143, 143, 154)
+		end
+
+		Tab.Hover = false
+
+		if not Tab.Active then
+			Tab["13"].ImageColor3 = Color3.fromRGB(143, 143, 154)
+			Tab["14"].TextColor3 = Color3.fromRGB(143, 143, 154)
+		end
+	end)
+
+	Tab["15"].MouseButton1Click:Connect(function()
+		-- Collect all sections this tab has containers in
+		local sections = {}
+		for _, entry in (Tab.AllContainers) do
+			sections[entry.section] = true
+		end
+
+		-- Deactivate current tabs for all relevant sections
+		for section, _ in pairs(sections) do
+			local current = GUI.CurrentTabs[section]
+			if current and current ~= Tab then
+				current.Active = false
+				if current.AllContainers then
+					for _, entry in (current.AllContainers) do
+						entry.container.Visible = false
+					end
+				else
+					current.ContentContainer.Visible = false
+				end
+				current["13"].ImageColor3 = Color3.fromRGB(143, 143, 154)
+				current["14"].TextColor3 = Color3.fromRGB(143, 143, 154)
+			end
+		end
+
+		Tab.Active = true
+		for _, entry in (Tab.AllContainers) do
+			entry.container.Visible = true
+			GUI.CurrentTabs[entry.section] = Tab
+		end
+
+		Tab["13"].ImageColor3 = Color3.fromRGB(255, 255, 255)
+		Tab["14"].TextColor3 = Color3.fromRGB(255, 255, 255)
+
+		if not GUI['e'].Visible then
+			GUI['e'].Visible = true
+		end
+
+		if Tab.Section == 'right' then
+			GUI["33"]["Text"] = options.name
+		else
+			GUI["31"]["Text"] = options.section_name or 'Fallback'
+			GUI["2d"]["Text"] = options.name
+			GUI["32"]["Text"] = options.name
+		end
+
+		-- AbsolutePosition/AbsoluteSize are already affected by UIScale, but the
+		-- indicator and highlight are INSIDE the scaled frame, so setting an
+		-- offset calculated from scaled absolute values would double-scale it.
+		-- Dividing by the target UIScale factor compensates for this.
+		-- We use _targetScale instead of live Scale to avoid issues during tweens.
+		local uiScale = GUI._targetScale or 1
+		if uiScale <= 0 then uiScale = 1 end
+
+		local Tab_Height = Tab["12"].AbsoluteSize.Y
+		local Tab_Y = Tab["12"].AbsolutePosition.Y
+
+		local Panel_Height = GUI["5"].AbsolutePosition.Y
+		local Indicator_Height = GUI.Indicator.AbsoluteSize.Y
+
+		local Offset = ((Tab_Y - Panel_Height) + (Tab_Height - Indicator_Height) / 2) / uiScale
+
+		TweenService:Create(GUI.Indicator, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{Position = UDim2.new(0, 0, 0, Offset)}):Play()
+
+		local Highlight = GUI["e"]
+
+		local Highlight_Height = Highlight.AbsoluteSize.Y
+		local Offset = ((Tab_Y - Panel_Height) + (Tab_Height - Highlight_Height) / 2) / uiScale
+
+		local Highlight_Tween = TweenService:Create(Highlight, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 8, 0, Offset)})
+		Highlight_Tween:Play()
+	end)
+
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if gpe then
+			return
+		end
+
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if Tab.Hover then
+				Tab:Activate()
+			end
+		end
+	end)
+
+	if GUI.CurrentTabs[Tab.Section] == Tab then
+		Tab:Activate()
+		Tab["13"].ImageColor3 = Color3.fromRGB(255, 255, 255)
+		Tab["14"].TextColor3 = Color3.fromRGB(255, 255, 255)
+	end
+
+	function Tab:Create_Toggle(options)
+		local Toggle = {
+			State = false,
+			flag = options.flag,
+			Keybind = nil,
+			WaitingForKey = false
+		}
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable
+		local toggleParent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+		Toggle["70"] = Instance.new("Frame", toggleParent);
+		Toggle["70"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
+		Toggle["70"]["Size"] = UDim2.new(1, 0, 0, 38);
+		Toggle["70"]["Name"] = [[AutoTotem_enable]];
+		Toggle["70"]["LayoutOrder"] = 0;
+		Toggle["70"]["BackgroundTransparency"] = 1;
+		-- Attributes
+		Toggle["70"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0));
+		Toggle["70"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Label
+		Toggle["71"] = Instance.new("TextLabel", Toggle["70"]);
+		Toggle["71"]["TextSize"] = 12;
+		Toggle["71"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+		Toggle["71"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+		Toggle["71"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+		Toggle["71"]["BackgroundTransparency"] = 1;
+		Toggle["71"]["Size"] = UDim2.new(0, 200, 0, 38);
+		Toggle["71"]["Text"] = options.name
+		Toggle["71"]["Name"] = [[Label]];
+		Toggle["71"]["Position"] = UDim2.new(0, 14, 0, 0);
+		-- Attributes
+		Toggle["71"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Toggle["71"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.KeybindBadge
+		Toggle["72"] = Instance.new("Frame", Toggle["70"]);
+		Toggle["72"]["BorderSizePixel"] = 0;
+		Toggle["72"]["BackgroundColor3"] = Color3.fromRGB(22, 23, 31);
+		Toggle["72"]["AnchorPoint"] = Vector2.new(1, 0.5);
+		Toggle["72"]["AutomaticSize"] = Enum.AutomaticSize.X;
+		Toggle["72"]["Size"] = UDim2.new(0, 0, 0, 22);
+		Toggle["72"]["Position"] = UDim2.new(1, -52, 0.5, 0);
+		Toggle["72"]["Name"] = [[KeybindBadge]];
+		-- Attributes
+		Toggle["72"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+		-- KeybindBadge.UICorner
+		Toggle["72_c"] = Instance.new("UICorner", Toggle["72"]);
+		Toggle["72_c"]["CornerRadius"] = UDim.new(0, 7);
+
+		-- KeybindBadge.UIPadding
+		Toggle["72_p"] = Instance.new("UIPadding", Toggle["72"]);
+		Toggle["72_p"]["PaddingLeft"] = UDim.new(0, 6);
+		Toggle["72_p"]["PaddingRight"] = UDim.new(0, 6);
+
+		-- KeybindBadge.UISizeConstraint (cap badge width so text auto-shrinks)
+		Toggle["72_max"] = Instance.new("UISizeConstraint", Toggle["72"]);
+		Toggle["72_max"]["MaxSize"] = Vector2.new(60, 22);
+
+		-- KeybindBadge.Text
+		Toggle["72_text"] = Instance.new("TextLabel", Toggle["72"]);
+		Toggle["72_text"]["TextSize"] = 12;
+		Toggle["72_text"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+		Toggle["72_text"]["TextColor3"] = Color3.fromRGB(138, 138, 148);
+		Toggle["72_text"]["BackgroundTransparency"] = 1;
+		Toggle["72_text"]["Size"] = UDim2.new(1, 0, 1, 0);
+		Toggle["72_text"]["Text"] = [[···]];
+		Toggle["72_text"]["Name"] = [[Text]];
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Keybind_Hit
+		Toggle["73"] = Instance.new("TextButton", Toggle["70"]);
+		Toggle["73"]["AutoButtonColor"] = false;
+		Toggle["73"]["ZIndex"] = 4;
+		Toggle["73"]["BackgroundTransparency"] = 1;
+		Toggle["73"]["Size"] = UDim2.new(0, 44, 0, 26);
+		Toggle["73"]["Text"] = [[]];
+		Toggle["73"]["Name"] = [[Keybind_Hit]];
+		Toggle["73"]["Position"] = UDim2.new(1, -52, 0.5, 0);
+		Toggle["73"]["AnchorPoint"] = Vector2.new(1, 0.5);
+		-- Attributes
+		Toggle["73"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Toggle["73"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- UIStroke border for keybind assigned state (matches keybind picker focused border)
+		Toggle["73_c"] = Instance.new("UICorner", Toggle["73"]);
+		Toggle["73_c"]["CornerRadius"] = UDim.new(0, 7);
+
+		--Toggle["73_s"] = Instance.new("UIStroke", Toggle["72"]);
+		Toggle["73_s"] = Instance.new("UIStroke", Toggle["73"]);
+		Toggle["73_s"]["Transparency"] = 1;
+		Toggle["73_s"]["Color"] = Color3.fromRGB(125, 109, 247);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Toggle
+		Toggle["74"] = Instance.new("Frame", Toggle["70"]);
+		Toggle["74"]["BorderSizePixel"] = 0;
+		Toggle["74"]["BackgroundColor3"] = Color3.fromRGB(37, 37, 47);
+		Toggle["74"]["AnchorPoint"] = Vector2.new(1, 0.5);
+		Toggle["74"]["Size"] = UDim2.new(0, 30, 0, 17);
+		Toggle["74"]["Position"] = UDim2.new(1, -12, 0.5, 0);
+		Toggle["74"]["Name"] = [[Toggle]];
+		-- Attributes
+		Toggle["74"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Toggle.UICorner
+		Toggle["75"] = Instance.new("UICorner", Toggle["74"]);
+		Toggle["75"]["CornerRadius"] = UDim.new(1, 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Toggle.Knob
+		Toggle["76"] = Instance.new("Frame", Toggle["74"]);
+		Toggle["76"]["BorderSizePixel"] = 0;
+		Toggle["76"]["BackgroundColor3"] = Color3.fromRGB(64, 64, 76);
+		Toggle["76"]["Size"] = UDim2.new(0, 13, 0, 13);
+		Toggle["76"]["Position"] = UDim2.new(0, 2, 0, 2);
+		Toggle["76"]["Name"] = [[Knob]];
+		-- Attributes
+		Toggle["76"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Toggle.Knob.UICorner
+		Toggle["77"] = Instance.new("UICorner", Toggle["76"]);
+		Toggle["77"]["CornerRadius"] = UDim.new(1, 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Toggle.Knob.UIShadow
+		Toggle["78"] = Instance.new("UIShadow", Toggle["76"]);
+
+		-- Attributes
+		Toggle["78"]:SetAttribute([[fadeOriginal_Transparency]], 0.75);
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Hit
+		Toggle["79"] = Instance.new("TextButton", Toggle["70"]);
+		Toggle["79"]["AutoButtonColor"] = false;
+		Toggle["79"]["ZIndex"] = 2;
+		Toggle["79"]["BackgroundTransparency"] = 1;
+		Toggle["79"]["Size"] = UDim2.new(1, 0, 1, 0);
+		Toggle["79"]["Text"] = [[]];
+		Toggle["79"]["Name"] = [[Hit]];
+		-- Attributes
+		Toggle["79"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Toggle["79"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		if Library.Flags[Toggle.flag] then
+			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(125, 109, 247) }):Play()
+			TweenService:Create(Toggle["76"], TweenInfo.new(0.2), { Position = UDim2.new(0, 15, 0, 2), BackgroundColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+		else
+			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(37, 37, 47) }):Play()
+			TweenService:Create(Toggle["76"], TweenInfo.new(0.2), { Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(64, 64, 76) }):Play()
+		end
+
+		function Toggle:Toggle(state)
+			if Library.Flags[self.flag] == nil then
+				Library.Flags[self.flag] = false
+			end
+
+			if state == nil then
+				Library.Flags[self.flag] = not Library.Flags[self.flag]
+			else
+				Library.Flags[self.flag] = state
+			end
+
+			if self._activeTweens then
+				for _, tween in self._activeTweens do
+					tween:Cancel()
+				end
+			end
+			self._activeTweens = {}
+
+			local bgFrame = Toggle["74"]
+			local knob = Toggle["76"]
+			if not bgFrame or not knob then return end
+
+			if Library.Flags[self.flag] then
+				local t1 = TweenService:Create(bgFrame, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(125, 109, 247) })
+				local t2 = TweenService:Create(knob, TweenInfo.new(0.2), { Position = UDim2.new(0, 15, 0, 2), BackgroundColor3 = Color3.fromRGB(255, 255, 255) })
+				t1:Play()
+				t2:Play()
+				table.insert(self._activeTweens, t1)
+				table.insert(self._activeTweens, t2)
+			else
+				local t1 = TweenService:Create(bgFrame, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(37, 37, 47) })
+				local t2 = TweenService:Create(knob, TweenInfo.new(0.2), { Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = Color3.fromRGB(64, 64, 76) })
+				t1:Play()
+				t2:Play()
+				table.insert(self._activeTweens, t1)
+				table.insert(self._activeTweens, t2)
+			end
+
+			if not GUI.ApplyingPreset then
+				pcall(Library.save_flags)
+			end
+
+			if options.callback then
+				options.callback(Library.Flags[self.flag])
+			end
+		end
+
+		if Library.Flags[Toggle.flag] == nil then
+			Library.Flags[Toggle.flag] = false
+		end
+
+		Toggle:Toggle(Library.Flags[Toggle.flag])
+
+		Toggle['79'].MouseButton1Click:Connect(function()
+			Toggle:Toggle()
+		end)
+
+		Toggle['73'].MouseButton1Click:Connect(function()
+			if GUI["kpw"] then
+				local Keybinds_Picker = GUI["kpw"]
+
+				if not Keybinds_Picker.Visible then
+					-- Opening
+					GUI.ActiveKeybindToggle = Toggle
+					GUI.WaitingForKey = false
+
+					Keybinds_Picker.Size = UDim2.new(0, 0, 0, 0)
+					Keybinds_Picker.Visible = true
+
+					local togglePos = Toggle["70"].AbsolutePosition
+					local parentPos = GUI["1"].AbsolutePosition
+					local toggleSize = Toggle["70"].AbsoluteSize
+					local pickerWidth = 150
+					local pickerHeight = 76
+					local pickerX = (togglePos.X - parentPos.X) + toggleSize.X - 52 - 20 - 5 - pickerWidth
+					local pickerY = (togglePos.Y - parentPos.Y) + (toggleSize.Y - pickerHeight) / 2
+
+					Keybinds_Picker.Position = UDim2.new(0, pickerX, 0, pickerY)
+
+					-- Update display based on current keybind state
+					if Toggle.Keybind then
+						GUI["kpw_nbf_p"].Text = Toggle.KeybindName or "New bind"
+						GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(243, 243, 247)
+						TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 0}):Play()
+					else
+						GUI["kpw_nbf_p"].Text = "New bind"
+						GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(138, 138, 148)
+						TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+					end
+
+					-- Update mode selection display
+					local mode = Toggle.KeybindMode or "toggle"
+					if mode == "toggle" then
+						GUI["kpw_ms"].Position = UDim2.new(0, 8, 0, 42)
+						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(244, 244, 248)
+					else
+						GUI["kpw_ms"].Position = UDim2.new(0, 77, 0, 42)
+						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(244, 244, 248)
+						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+					end
+
+					TweenService:Create(Keybinds_Picker, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 150, 0, 76)}):Play()
+				else
+					-- Closing
+					GUI.WaitingForKey = false
+					TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+					local closeTween = TweenService:Create(Keybinds_Picker, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, 0)})
+					closeTween.Completed:Once(function()
+						Keybinds_Picker.Visible = false
+					end)
+					closeTween:Play()
+				end
+			end
+		end)
+
+		-- Right-click on Dots to clear keybind
+		Toggle['73'].MouseButton2Click:Connect(function()
+			if Toggle.Keybind then
+				Toggle.Keybind = nil
+				Toggle.KeybindName = nil
+				Library.Keybinds[Toggle] = nil
+				if Toggle.flag then
+					Library.Flags[Toggle.flag .. "_keybind"] = nil
+					Library.save_flags()
+				end
+				if Toggle["72_text"] then
+					Toggle["72_text"].Text = "···"
+					Toggle["72_text"].TextColor3 = Color3.fromRGB(138, 138, 148)
+				end
+				if Toggle["73_s"] then
+					TweenService:Create(Toggle["73_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+				end
+			end
+		end)
+
+		-- Load keybind from saved flags
+		if Toggle.flag and Library.Flags[Toggle.flag .. "_keybind"] then
+			local saved = Library.Flags[Toggle.flag .. "_keybind"]
+			local key
+			if saved.keyType == "KeyCode" then
+				key = Enum.KeyCode[saved.keyName]
+			elseif saved.keyType == "UserInputType" then
+				key = Enum.UserInputType[saved.keyName]
+			end
+			if key then
+				Toggle.Keybind = key
+				Toggle.KeybindName = saved.displayName or key.Name
+				Toggle.KeybindMode = saved.mode or "toggle"
+				Library.Keybinds[Toggle] = {
+					key = key,
+					mode = Toggle.KeybindMode,
+					flag = Toggle.flag
+				}
+				if Toggle["72_text"] then
+					Toggle["72_text"].Text = Toggle.KeybindName
+					Toggle["72_text"].TextColor3 = Color3.fromRGB(125, 109, 247)
+				end
+				if Toggle["73_s"] then
+					Toggle["73_s"].Transparency = 0
+				end
+			end
+		end
+
+		if Toggle.flag then
+			table.insert(GUI.Widgets, function()
+				pcall(function() Toggle:Toggle(Library.Flags[Toggle.flag] == true) end)
+			end)
+		end
+
+		return Toggle
+	end
+
+	function Tab:Create_Slider(options)
+		options = Library:validate({name = 'Slider', min = 0, max = 100, default = 50, callback = nil, tab = nil, flag = nil}, options or {})
+
+		local Slider = {
+			MouseDown = false,
+			Hover = false,
+			Connection = nil,
+			flag = options.flag
+		}
+
+		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+		Slider["6c"] = Instance.new("Frame", parent);
+		Slider["6c"]["BorderSizePixel"] = 0;
+		Slider["6c"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
+		Slider["6c"]["AutomaticSize"] = Enum.AutomaticSize.Y;
+		Slider["6c"]["Size"] = UDim2.new(0, 264, 0, 0);
+		Slider["6c"]["Position"] = UDim2.new(0, 0, 0, 0);
+		Slider["6c"]["Name"] = [[AutoTotem_main]];
+		-- Attributes
+		Slider["6c"]:SetAttribute([[pageToken]], 22);
+		Slider["6c"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.UICorner
+		Slider["6d"] = Instance.new("UICorner", Slider["6c"]);
+		Slider["6d"]["CornerRadius"] = UDim.new(0, 10);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.UIShadow
+		Slider["6e"] = Instance.new("UIShadow", Slider["6c"]);
+
+		-- Attributes
+		Slider["6e"]:SetAttribute([[fadeOriginal_Transparency]], 0.55);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.UIListLayout
+		Slider["6f"] = Instance.new("UIListLayout", Slider["6c"]);
+		Slider["6f"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.Divider_3
+		Slider["7a"] = Instance.new("Frame", Slider["6c"]);
+		Slider["7a"]["BorderSizePixel"] = 0;
+		Slider["7a"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
+		Slider["7a"]["Size"] = UDim2.new(1, 0, 0, 1);
+		Slider["7a"]["Name"] = [[Divider_3]];
+		Slider["7a"]["LayoutOrder"] = 3;
+		Slider["7a"]["BackgroundTransparency"] = 0.25;
+		-- Attributes
+		Slider["7a"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0));
+		Slider["7a"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0.25);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health
+		Slider["7b"] = Instance.new("Frame", Slider["6c"]);
+		Slider["7b"]["Size"] = UDim2.new(1, 0, 0, 38);
+		Slider["7b"]["Name"] = [[AutoTotem_health]];
+		Slider["7b"]["LayoutOrder"] = 4;
+		Slider["7b"]["BackgroundTransparency"] = 1;
+		-- Attributes
+		Slider["7b"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0));
+		Slider["7b"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Label
+		Slider["7c"] = Instance.new("TextLabel", Slider["7b"]);
+		Slider["7c"]["TextSize"] = 12;
+		Slider["7c"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+		Slider["7c"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+		Slider["7c"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+		Slider["7c"]["BackgroundTransparency"] = 1;
+		Slider["7c"]["Size"] = UDim2.new(0, 200, 0, 38);
+		Slider["7c"]["Text"] = options.name
+		Slider["7c"]["Name"] = [[Label]];
+		Slider["7c"]["Position"] = UDim2.new(0, 14, 0, 0);
+		-- Attributes
+		Slider["7c"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Slider["7c"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Value
+		Slider["7d"] = Instance.new("TextLabel", Slider["7b"]);
+		Slider["7d"]["TextSize"] = 12;
+		Slider["7d"]["TextXAlignment"] = Enum.TextXAlignment.Right;
+		Slider["7d"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+		Slider["7d"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+		Slider["7d"]["BackgroundTransparency"] = 1;
+		Slider["7d"]["AnchorPoint"] = Vector2.new(1, 0.5);
+		Slider["7d"]["Size"] = UDim2.new(0, 49, 0, 38);
+		Slider["7d"]["Text"] = tostring((options.default or 100) .. '%');
+		Slider["7d"]["Name"] = [[Value]];
+		Slider["7d"]["Position"] = UDim2.new(1, -95, 0.5, 0);
+		-- Attributes
+		Slider["7d"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Slider["7d"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider
+		Slider["7e"] = Instance.new("Frame", Slider["7b"]);
+		Slider["7e"]["BorderSizePixel"] = 0;
+		Slider["7e"]["BackgroundColor3"] = Color3.fromRGB(53, 53, 63);
+		Slider["7e"]["AnchorPoint"] = Vector2.new(1, 0.5);
+		Slider["7e"]["Size"] = UDim2.new(0, 75, 0, 4);
+		Slider["7e"]["Position"] = UDim2.new(1, -12, 0.5, 0);
+		Slider["7e"]["Name"] = [[Slider]];
+		-- Attributes
+		Slider["7e"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider.UICorner
+		Slider["7f"] = Instance.new("UICorner", Slider["7e"]);
+		Slider["7f"]["CornerRadius"] = UDim.new(0, 2);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider.Fill
+		Slider["80"] = Instance.new("Frame", Slider["7e"]);
+		Slider["80"]["BorderSizePixel"] = 0;
+		Slider["80"]["BackgroundColor3"] = Color3.fromRGB(125, 109, 247);
+		local _defaultPct = ((options.default or 100) - (options.min or 0)) / ((options.max or 100) - (options.min or 0))
+		Slider["80"]["Size"] = UDim2.fromScale(_defaultPct, 1);
+		Slider["80"]["Name"] = [[Fill]];
+		-- Attributes
+		Slider["80"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider.Fill.UICorner
+		Slider["81"] = Instance.new("UICorner", Slider["80"]);
+		Slider["81"]["CornerRadius"] = UDim.new(0, 2);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider.Knob
+		Slider["82"] = Instance.new("Frame", Slider["7e"]);
+		Slider["82"]["BorderSizePixel"] = 0;
+		Slider["82"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+		Slider["82"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
+		Slider["82"]["Size"] = UDim2.new(0, 10, 0, 10);
+		Slider["82"]["Position"] = UDim2.new(_defaultPct, 0, 0.5, 0);
+		Slider["82"]["Name"] = [[Knob]];
+		-- Attributes
+		Slider["82"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider.Knob.UICorner
+		Slider["83"] = Instance.new("UICorner", Slider["82"]);
+		Slider["83"]["CornerRadius"] = UDim.new(1, 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider.Knob.UIStroke
+		Slider["84"] = Instance.new("UIStroke", Slider["82"]);
+		Slider["84"]["Thickness"] = 2;
+		Slider["84"]["Color"] = Color3.fromRGB(31, 31, 39);
+		-- Attributes
+		Slider["84"]:SetAttribute([[fadeOriginal_Transparency]], 0);
+
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Hit
+		Slider["85"] = Instance.new("TextButton", Slider["7b"]);
+		Slider["85"]["AutoButtonColor"] = false;
+		Slider["85"]["ZIndex"] = 3;
+		Slider["85"]["BackgroundTransparency"] = 1;
+		Slider["85"]["Size"] = UDim2.new(0, 91, 0, 26);
+		Slider["85"]["Text"] = [[]];
+		Slider["85"]["Name"] = [[Hit]];
+		Slider["85"]["Position"] = UDim2.new(1, -95, 0.5, -13);
+		-- Attributes
+		Slider["85"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Slider["85"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.Divider_5
+		Slider["86"] = Instance.new("Frame", Slider["6c"]);
+		Slider["86"]["BorderSizePixel"] = 0;
+		Slider["86"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
+		Slider["86"]["Size"] = UDim2.new(1, 0, 0, 1);
+		Slider["86"]["Name"] = [[Divider_5]];
+		Slider["86"]["LayoutOrder"] = 5;
+		Slider["86"]["BackgroundTransparency"] = 0.25;
+		-- Attributes
+		Slider["86"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0));
+		Slider["86"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0.25);
+
+		function Slider:SetValue(v, inputPos)
+			if v == nil then
+				local mousePos = inputPos or UserInputService:GetMouseLocation()
+				local Percentage = math.clamp((mousePos.X - Slider['7e'].AbsolutePosition.X) / (Slider['7e'].AbsoluteSize.X), 0, 1)
+				local Value = math.round(((options.max - options.min) * Percentage) + options.min)
+
+				Slider['7d'].Text = tostring(Value) .. '%'
+				Slider["82"]["Position"] = UDim2.new(Percentage, 0, 0.5, 0)
+
+				Slider["80"].Size = UDim2.fromScale(Percentage, 1)
+			else
+				Slider['7d'].Text = tostring(v) .. '%'
+				local pct = (v - options.min) / (options.max - options.min)
+				Slider['80'].Size = UDim2.fromScale(pct, 1)
+				Slider["82"]["Position"] = UDim2.new(pct, 0, 0.5, 0)
+			end
+
+			if Slider.flag then
+				Library.Flags[Slider.flag] = Slider:GetValue()
+				if not GUI.ApplyingPreset then
+					Library.save_flags()
+				end
+			end
+
+			if options.callback then
+				options.callback(Slider:GetValue())
+			end
+		end
+
+		function Slider:GetValue()
+			local text = Slider['7d'].Text
+			local num = tonumber(text:match("%-?%d+"))
+			return num
+		end
+
+		Slider['85'].MouseEnter:Connect(function()
+			Slider.Hover = true
+		end)
+
+		Slider['85'].MouseLeave:Connect(function()
+			Slider.Hover = false
+		end)
+
+		-- Track slider dragging state for both mouse and touch
+		local sliderDragging = false
+
+		-- MouseButton1Down fires on both mouse and touch for TextButtons
+		Slider['85'].MouseButton1Down:Connect(function()
+			sliderDragging = true
+			Slider:SetValue(nil, UserInputService:GetMouseLocation())
+		end)
+
+		UserInputService.InputChanged:Connect(function(input)
+			if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				Slider:SetValue(nil, input.Position)
+			end
+		end)
+
+		UserInputService.InputEnded:Connect(function(input, gpe)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				sliderDragging = false
+			end
+		end)
+
+		if Slider.flag then
+			if Library.Flags[Slider.flag] ~= nil then
+				Slider:SetValue(Library.Flags[Slider.flag])
+			else
+				Library.Flags[Slider.flag] = options.default or 50
+			end
+		end
+
+		if Slider.flag then
+			table.insert(GUI.Widgets, function()
+				if Library.Flags[Slider.flag] ~= nil then
+					Slider:SetValue(Library.Flags[Slider.flag])
+				end
+			end)
+		end
+
+		return Slider
+	end
+
+	function Tab:Create_Dropdown(options)
+		options = Library:validate({name = 'Dropdown', options = {'Option 1', 'Option 2', 'Option 3'}, default = nil, callback = nil, flag = nil, tab = nil}, options or {})
+
+		local Dropdown = {
+			Selected = (options.flag and Library.Flags[options.flag]) or options.default or options.options[1],
+			flag = options.flag,
+			Open = false
+		}
+
+		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+
+		-- Row container (same style as toggle/slider rows)
+		Dropdown["d70"] = Instance.new("Frame", parent);
+		Dropdown["d70"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
+		Dropdown["d70"]["Size"] = UDim2.new(1, 0, 0, 38);
+		Dropdown["d70"]["Name"] = options.name .. "_dropdown";
+		Dropdown["d70"]["LayoutOrder"] = 0;
+		Dropdown["d70"]["BackgroundTransparency"] = 1;
+		Dropdown["d70"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0));
+		Dropdown["d70"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- Label
+		Dropdown["d71"] = Instance.new("TextLabel", Dropdown["d70"]);
+		Dropdown["d71"]["TextSize"] = 12;
+		Dropdown["d71"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+		Dropdown["d71"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+		Dropdown["d71"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+		Dropdown["d71"]["BackgroundTransparency"] = 1;
+		Dropdown["d71"]["Size"] = UDim2.new(0, 120, 0, 38);
+		Dropdown["d71"]["Text"] = options.name;
+		Dropdown["d71"]["Name"] = [[Label]];
+		Dropdown["d71"]["Position"] = UDim2.new(0, 14, 0, 0);
+		Dropdown["d71"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Dropdown["d71"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- Dropdown button (anchored right, Winds UI style)
+		Dropdown["d72"] = Instance.new("Frame", Dropdown["d70"]);
+		Dropdown["d72"]["BorderSizePixel"] = 0;
+		Dropdown["d72"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
+		Dropdown["d72"]["AnchorPoint"] = Vector2.new(1, 0.5);
+		Dropdown["d72"]["Size"] = UDim2.new(0, 80, 0, 22);
+		Dropdown["d72"]["Position"] = UDim2.new(1, -12, 0.5, 0);
+		Dropdown["d72"]["Name"] = [[DropdownButton]];
+		Dropdown["d72"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+		-- Dropdown button corner
+		Dropdown["d72_c"] = Instance.new("UICorner", Dropdown["d72"]);
+		Dropdown["d72_c"]["CornerRadius"] = UDim.new(0, 6);
+
+		-- Dropdown button shadow
+		Dropdown["d72_sh"] = Instance.new("UIShadow", Dropdown["d72"]);
+		Dropdown["d72_sh"]:SetAttribute([[fadeOriginal_Transparency]], 0.55);
+
+		-- Value label inside dropdown button
+		Dropdown["d73"] = Instance.new("TextLabel", Dropdown["d72"]);
+		Dropdown["d73"]["TextSize"] = 11;
+		Dropdown["d73"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+		Dropdown["d73"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+		Dropdown["d73"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
+		Dropdown["d73"]["BackgroundTransparency"] = 1;
+		Dropdown["d73"]["Size"] = UDim2.new(1, -26, 1, 0);
+		Dropdown["d73"]["Text"] = Dropdown.Selected;
+		Dropdown["d73"]["Name"] = [[Value]];
+		Dropdown["d73"]["Position"] = UDim2.new(0, 8, 0, 0);
+		Dropdown["d73"]["TextTruncate"] = Enum.TextTruncate.AtEnd;
+		Dropdown["d73"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Dropdown["d73"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- Caret icon (downward arrow, same asset as Winds UI)
+		Dropdown["d74"] = Instance.new("ImageLabel", Dropdown["d72"]);
+		Dropdown["d74"]["BorderSizePixel"] = 0;
+		Dropdown["d74"]["ScaleType"] = Enum.ScaleType.Fit;
+		Dropdown["d74"]["Image"] = [[rbxassetid://10709790948]];
+		Dropdown["d74"]["ImageColor3"] = Color3.fromRGB(143, 143, 154);
+		Dropdown["d74"]["Size"] = UDim2.new(0, 10, 0, 10);
+		Dropdown["d74"]["BackgroundTransparency"] = 1;
+		Dropdown["d74"]["Name"] = [[IMG_Caret]];
+		Dropdown["d74"]["Position"] = UDim2.new(1, -15, 0, 6);
+		Dropdown["d74"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
+		Dropdown["d74"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- Hover stroke on dropdown button (Winds UI style)
+		Dropdown["d72_s"] = Instance.new("UIStroke", Dropdown["d72"]);
+		Dropdown["d72_s"]["Transparency"] = 1;
+		Dropdown["d72_s"]["Color"] = Color3.fromRGB(70, 70, 86);
+		Dropdown["d72_s"]:SetAttribute([[fadeOriginal_Transparency]], 1);
+
+		-- Hit button for dropdown
+		Dropdown["d75"] = Instance.new("TextButton", Dropdown["d72"]);
+		Dropdown["d75"]["AutoButtonColor"] = false;
+		Dropdown["d75"]["ZIndex"] = 3;
+		Dropdown["d75"]["BackgroundTransparency"] = 1;
+		Dropdown["d75"]["Size"] = UDim2.new(1, 0, 1, 0);
+		Dropdown["d75"]["Text"] = [[]];
+		Dropdown["d75"]["Name"] = [[Hit]];
+		Dropdown["d75"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		Dropdown["d75"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		Dropdown["d73"]:GetPropertyChangedSignal("TextBounds"):Connect(function()
+			local width = math.clamp(math.ceil(Dropdown["d73"].TextBounds.X) + 34, 58, 150)
+
+			TweenService:Create(Dropdown["d72"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, width, 0, 22)}):Play()
+		end)
+
+		-- Create shared dropdown popup if it doesn't exist
+		if not GUI.DropdownPopup then
+			if not GUI.DropdownPopupGui then
+				GUI.DropdownPopupGui = Instance.new("ScreenGui")
+				GUI.DropdownPopupGui.Name = "Byte_DropdownPopup"
+				GUI.DropdownPopupGui.ResetOnSpawn = false
+				GUI.DropdownPopupGui.IgnoreGuiInset = true
+				GUI.DropdownPopupGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+				GUI.DropdownPopupGui.DisplayOrder = 1
+				GUI.DropdownPopupGui.Parent = Player.PlayerGui
+			end
+			GUI.DropdownPopup = Instance.new("Frame", GUI.DropdownPopupGui);
+			GUI.DropdownPopup["BorderSizePixel"] = 0;
+			GUI.DropdownPopup["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
+			GUI.DropdownPopup["ClipsDescendants"] = true;
+			GUI.DropdownPopup["ZIndex"] = 52;
+			GUI.DropdownPopup["Size"] = UDim2.new(0, 139, 0, 0);
+			GUI.DropdownPopup["Position"] = UDim2.new(0, 500, 0, 200);
+			GUI.DropdownPopup["Name"] = [[dropdown_popup]];
+			GUI.DropdownPopup["Visible"] = false;
+			GUI.DropdownPopup:SetAttribute([[fadeIsolated]], true);
+
+			local popupCorner = Instance.new("UICorner", GUI.DropdownPopup);
+			popupCorner.CornerRadius = UDim.new(0, 10);
+
+			local popupStroke = Instance.new("UIStroke", GUI.DropdownPopup);
+			popupStroke.Transparency = 0.4;
+			popupStroke.Color = Color3.fromRGB(47, 47, 58);
+
+			local popupShadow = Instance.new("UIShadow", GUI.DropdownPopup);
+			popupShadow:SetAttribute([[fadeOriginal_Transparency]], 0.55);
+
+			-- Drag handle at top of popup so users can reposition it
+			local dragHandle = Instance.new("TextButton", GUI.DropdownPopup);
+			dragHandle.Name = "DragHandle";
+			dragHandle.Size = UDim2.new(1, 0, 0, 10);
+			dragHandle.Position = UDim2.new(0, 0, 0, 0);
+			dragHandle.BackgroundTransparency = 1;
+			dragHandle.Text = "";
+			dragHandle.ZIndex = 60;
+			dragHandle.AutoButtonColor = false;
+
+			local grip = Instance.new("Frame", dragHandle);
+			grip.Size = UDim2.new(0, 24, 0, 3);
+			grip.Position = UDim2.new(0.5, 0, 0.5, 0);
+			grip.AnchorPoint = Vector2.new(0.5, 0.5);
+			grip.BackgroundColor3 = Color3.fromRGB(70, 70, 82);
+			grip.BorderSizePixel = 0;
+			local gripCorner = Instance.new("UICorner", grip);
+			gripCorner.CornerRadius = UDim.new(1, 0);
+
+			local popupDrag = {
+				Dragging = false,
+				DragStart = nil,
+				StartPos = nil,
+				DragInput = nil
+			}
+
+			dragHandle.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1
+					or input.UserInputType == Enum.UserInputType.Touch then
+					popupDrag.Dragging = true
+					popupDrag.DragStart = input.Position
+					popupDrag.StartPos = GUI.DropdownPopup.Position
+					popupDrag.DragInput = input
+
+					input.Changed:Connect(function()
+						if input.UserInputState == Enum.UserInputState.End then
+							popupDrag.Dragging = false
+						end
+					end)
+				end
+			end)
+
+			dragHandle.InputChanged:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseMovement
+					or input.UserInputType == Enum.UserInputType.Touch then
+					popupDrag.DragInput = input
+				end
+			end)
+
+			UserInputService.InputChanged:Connect(function(input)
+				if input == popupDrag.DragInput and popupDrag.Dragging then
+					local delta = input.Position - popupDrag.DragStart
+					GUI.DropdownPopup.Position = UDim2.new(
+						popupDrag.StartPos.X.Scale,
+						popupDrag.StartPos.X.Offset + delta.X,
+						popupDrag.StartPos.Y.Scale,
+						popupDrag.StartPos.Y.Offset + delta.Y
+					)
+				end
+			end)
+
+			GUI.DropdownPopupData = {
+				window = GUI.DropdownPopup,
+				currentAnchor = nil,
+				currentCallback = nil,
+				currentDropdown = nil
+			}
+
+			-- Shared close function
+			GUI.closeDropdownPopup = function()
+				local data = GUI.DropdownPopupData
+				if data.currentDropdown then
+					data.currentDropdown.Open = false
+					TweenService:Create(data.currentDropdown["d74"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+						Rotation = 0
+					}):Play()
+				end
+				data.currentAnchor = nil
+				data.currentCallback = nil
+				data.currentDropdown = nil
+
+				local popup = GUI.DropdownPopup
+				local closeTween = TweenService:Create(popup, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+					Size = UDim2.new(0, popup.AbsoluteSize.X, 0, 0)
+				})
+				closeTween.Completed:Once(function()
+					popup.Visible = false
+				end)
+				closeTween:Play()
+			end
+
+			-- Click-outside detection
+			UserInputService.InputBegan:Connect(function(input, gpe)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if GUI.DropdownPopup.Visible and GUI.DropdownPopupData.currentAnchor then
+						local mousePos = input.Position
+						local popupRect = GUI.DropdownPopup.AbsolutePosition
+						local popupSize = GUI.DropdownPopup.AbsoluteSize
+						local anchorRect = GUI.DropdownPopupData.currentAnchor.AbsolutePosition
+						local anchorSize = GUI.DropdownPopupData.currentAnchor.AbsoluteSize
+
+						local inPopup = mousePos.X >= popupRect.X and mousePos.X <= popupRect.X + popupSize.X
+							and mousePos.Y >= popupRect.Y and mousePos.Y <= popupRect.Y + popupSize.Y
+						local inAnchor = mousePos.X >= anchorRect.X - 4 and mousePos.X <= anchorRect.X + anchorSize.X + 4
+							and mousePos.Y >= anchorRect.Y - 4 and mousePos.Y <= anchorRect.Y + anchorSize.Y + 4
+
+						if not inPopup and not inAnchor and not Is_Mobile then
+							GUI.closeDropdownPopup()
+						end
+					end
+				end
+			end)
+		end
+
+		-- Open dropdown popup
+		local function openDropdownPopup()
+			local popup = GUI.DropdownPopup
+			local anchor = Dropdown["d72"]
+
+			-- If already open for this dropdown, close it
+			if popup.Visible and GUI.DropdownPopupData.currentAnchor == anchor then
+				GUI.closeDropdownPopup()
+				return
+			end
+
+			-- Close any existing popup instantly
+			if popup.Visible then
+				popup.Visible = false
+				if GUI.DropdownPopupData.currentDropdown then
+					GUI.DropdownPopupData.currentDropdown.Open = false
+					GUI.DropdownPopupData.currentDropdown["d74"].Rotation = 0
+				end
+			end
+
+			Dropdown.Open = true
+			GUI.DropdownPopupData.currentAnchor = anchor
+			GUI.DropdownPopupData.currentCallback = function(value)
+				Dropdown.Selected = value
+				Dropdown["d73"].Text = value
+				if Dropdown.flag then
+					Library.Flags[Dropdown.flag] = value
+					Library.save_flags()
+				end
+				if options.callback then
+					options.callback(value)
+				end
+			end
+			GUI.DropdownPopupData.currentDropdown = Dropdown
+
+			-- Rotate caret (Winds UI style)
+			TweenService:Create(Dropdown["d74"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Rotation = 180
+			}):Play()
+
+			-- Clear old option frames
+			for _, child in popup:GetChildren() do
+				if (child:IsA("Frame") or child:IsA("TextButton")) and child.Name ~= "DragHandle" then
+					child:Destroy()
+				end
+			end
+
+			-- Calculate width based on longest option (Winds UI style)
+			local ROW_HEIGHT = 26
+			local MIN_WIDTH = 139
+			local MAX_WIDTH = 240
+			local width = MIN_WIDTH
+
+			for _, option in options.options do
+				local charWidth = #option * 7
+				width = math.max(width, charWidth + 54)
+			end
+			width = math.min(width, MAX_WIDTH)
+
+			-- Create option rows
+			local rows = {}
+			for index, option in options.options do
+				local selected = option == Dropdown.Selected
+
+				local row = Instance.new("Frame", popup)
+				row.Name = "Option_" .. option
+				row.BackgroundColor3 = Color3.fromRGB(39, 39, 47)
+				row.BackgroundTransparency = selected and 0 or 1
+				row.BorderSizePixel = 0
+				row.Position = UDim2.new(0, 5, 0, 14 + (index - 1) * ROW_HEIGHT)
+				row.Size = UDim2.new(0, width - 10, 0, ROW_HEIGHT)
+				row.ZIndex = 53
+
+				local rowCorner = Instance.new("UICorner", row)
+				rowCorner.CornerRadius = UDim.new(0, 6)
+
+				if selected then
+					-- Checkmark icon (Winds UI style)
+					local check = Instance.new("ImageLabel", row)
+					check.Name = "IMG_Check"
+					check.AnchorPoint = Vector2.new(0, 0.5)
+					check.BackgroundTransparency = 1
+					check.Position = UDim2.new(0, 9, 0.5, 0)
+					check.Size = UDim2.new(0, 12, 0, 12)
+					check.ZIndex = 53
+					check.Image = "rbxassetid://86817768619372"
+					check.ImageColor3 = Color3.fromRGB(246, 246, 250)
+					check.ScaleType = Enum.ScaleType.Fit
+					check.ImageTransparency = 1
+				end
+
+				-- Option label
+				local optionLabel = Instance.new("TextLabel", row)
+				optionLabel.Name = "Label"
+				optionLabel.BackgroundTransparency = 1
+				optionLabel.Position = UDim2.new(0, 30, 0, 0)
+				optionLabel.Size = UDim2.new(0, width - 46, 0, ROW_HEIGHT)
+				optionLabel.ZIndex = 53
+				optionLabel.FontFace = Font.new([[rbxasset://fonts/families/Montserrat.json]], selected and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+				optionLabel.Text = option
+				optionLabel.TextColor3 = selected and Color3.fromRGB(246, 246, 250) or Color3.fromRGB(132, 132, 143)
+				optionLabel.TextSize = 12
+				optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+				optionLabel.TextTransparency = 1
+
+				-- Hit button
+				local hit = Instance.new("TextButton", row)
+				hit.AutoButtonColor = false
+				hit.ZIndex = 54
+				hit.BackgroundTransparency = 1
+				hit.Size = UDim2.new(1, 0, 1, 0)
+				hit.Text = ""
+
+				if not selected then
+					hit.MouseEnter:Connect(function()
+						TweenService:Create(row, TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+							BackgroundTransparency = 0.6
+						}):Play()
+					end)
+					hit.MouseLeave:Connect(function()
+						TweenService:Create(row, TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+							BackgroundTransparency = 1
+						}):Play()
+					end)
+				end
+
+				hit.MouseButton1Click:Connect(function()
+					local cb = GUI.DropdownPopupData.currentCallback
+					if not Is_Mobile then
+						GUI.closeDropdownPopup()
+					end
+					if cb then cb(option) end
+					-- On mobile, update selection visuals without closing
+					if Is_Mobile then
+						-- Update selected option visual: move checkmark and highlight to clicked option
+						for _, child in GUI.DropdownPopup:GetChildren() do
+							if (child:IsA("Frame") or child:IsA("TextButton")) and child.Name ~= "DragHandle" then
+								local label = child:FindFirstChild("Label")
+								if label and label:IsA("TextLabel") then
+									local wasSelected = (label.Text == option)
+									label.FontFace = Font.new([[rbxasset://fonts/families/Montserrat.json]], wasSelected and Enum.FontWeight.SemiBold or Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+									label.TextColor3 = wasSelected and Color3.fromRGB(246, 246, 250) or Color3.fromRGB(132, 132, 143)
+
+									-- Update row highlight (background transparency)
+									TweenService:Create(child, TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+										BackgroundTransparency = wasSelected and 0 or 1
+									}):Play()
+
+									-- Move checkmark to newly selected row
+									local existingCheck = child:FindFirstChild("IMG_Check")
+									if wasSelected then
+										if not existingCheck then
+											local check = Instance.new("ImageLabel", child)
+											check.Name = "IMG_Check"
+											check.AnchorPoint = Vector2.new(0, 0.5)
+											check.BackgroundTransparency = 1
+											check.Position = UDim2.new(0, 9, 0.5, 0)
+											check.Size = UDim2.new(0, 12, 0, 12)
+											check.ZIndex = 53
+											check.Image = "rbxassetid://86817768619372"
+											check.ImageColor3 = Color3.fromRGB(246, 246, 250)
+											check.ScaleType = Enum.ScaleType.Fit
+											check.ImageTransparency = 1
+											TweenService:Create(check, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+												ImageTransparency = 0
+											}):Play()
+										elseif existingCheck.ImageTransparency > 0 then
+											TweenService:Create(existingCheck, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+												ImageTransparency = 0
+											}):Play()
+										end
+									elseif existingCheck then
+										TweenService:Create(existingCheck, TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+											ImageTransparency = 1
+										}):Play()
+									end
+								end
+							end
+						end
+					end
+				end)
+
+				table.insert(rows, {row = row, label = optionLabel, selected = selected})
+			end
+
+			local anchorPos = anchor.AbsolutePosition
+			local parentPos = GUI["1"].AbsolutePosition
+			local anchorSize = anchor.AbsoluteSize
+			local fullHeight = 20 + #options.options * ROW_HEIGHT
+
+			local popupX = (anchorPos.X - parentPos.X) + anchorSize.X - width
+			local popupY = (anchorPos.Y - parentPos.Y) + anchorSize.Y + 4
+
+			popup.Position = UDim2.new(0, popupX, 0, popupY)
+			popup.Size = UDim2.new(0, width, 0, math.floor(fullHeight * 0.72))
+			popup.Visible = true
+
+			-- Animate open (size expansion like Winds UI)
+			TweenService:Create(popup, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Size = UDim2.new(0, width, 0, fullHeight)
+			}):Play()
+
+			-- Stagger fade-in for option rows (Winds UI style)
+			for i, entry in rows do
+				task.delay(i * 0.025, function()
+					TweenService:Create(entry.label, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+						TextTransparency = 0
+					}):Play()
+					if entry.selected then
+						local check = entry.row:FindFirstChild("IMG_Check")
+						if check then
+							TweenService:Create(check, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+								ImageTransparency = 0
+							}):Play()
+						end
+					end
+				end)
+			end
+		end
+
+		-- Hover effects on dropdown button
+		Dropdown["d75"].MouseEnter:Connect(function()
+			TweenService:Create(Dropdown["d72_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Transparency = 0.35
+			}):Play()
+		end)
+
+		Dropdown["d75"].MouseLeave:Connect(function()
+			TweenService:Create(Dropdown["d72_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Transparency = 1
+			}):Play()
+		end)
+
+		-- Click to open/close
+		Dropdown["d75"].MouseButton1Click:Connect(function()
+			openDropdownPopup()
+		end)
+
+		-- Set flag
+		if Dropdown.flag then
+			Library.Flags[Dropdown.flag] = Dropdown.Selected
+		end
+
+		function Dropdown:SetValue(value)
+			Dropdown.Selected = value
+			Dropdown["d73"].Text = value
+			if Dropdown.flag then
+				Library.Flags[Dropdown.flag] = value
+			end
+			if options.callback then
+				options.callback(value)
+			end
+		end
+
+		function Dropdown:GetValue()
+			return Dropdown.Selected
+		end
+
+		if Dropdown.flag then
+			table.insert(GUI.Widgets, function()
+				if Library.Flags[Dropdown.flag] ~= nil then
+					Dropdown:SetValue(Library.Flags[Dropdown.flag])
+				end
+			end)
+		end
+
+		return Dropdown
+	end
+
+	function Tab:Create_ColorPicker(options)
+		options = Library:validate({name = 'ColorPicker', default = Color3.fromRGB(255, 255, 255), callback = nil, flag = nil, tab = nil}, options or {})
+
+		local ColorPicker = {
+			Color = (function()
+				if options.flag and Library.Flags[options.flag] then
+					local saved = Library.Flags[options.flag]
+					if typeof(saved) == "table" then
+						return Color3.new(saved.R or 1, saved.G or 1, saved.B or 1)
+					elseif typeof(saved) == "Color3" then
+						return saved
+					end
+				end
+				return options.default or Color3.fromRGB(255, 255, 255)
+			end)(),
+			flag = options.flag,
+		}
+
+		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+
+		-- Row container (same style as toggle/slider/dropdown rows)
+		ColorPicker["cp0"] = Instance.new("Frame", parent);
+		ColorPicker["cp0"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
+		ColorPicker["cp0"]["Size"] = UDim2.new(1, 0, 0, 38);
+		ColorPicker["cp0"]["Name"] = options.name .. "_colorpicker";
+		ColorPicker["cp0"]["LayoutOrder"] = 0;
+		ColorPicker["cp0"]["BackgroundTransparency"] = 1;
+		ColorPicker["cp0"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0));
+		ColorPicker["cp0"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- Label
+		ColorPicker["cp1"] = Instance.new("TextLabel", ColorPicker["cp0"]);
+		ColorPicker["cp1"]["TextSize"] = 12;
+		ColorPicker["cp1"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+		ColorPicker["cp1"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+		ColorPicker["cp1"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
+		ColorPicker["cp1"]["BackgroundTransparency"] = 1;
+		ColorPicker["cp1"]["Size"] = UDim2.new(0, 120, 0, 38);
+		ColorPicker["cp1"]["Text"] = options.name;
+		ColorPicker["cp1"]["Name"] = [[Label]];
+		ColorPicker["cp1"]["Position"] = UDim2.new(0, 14, 0, 0);
+		ColorPicker["cp1"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		ColorPicker["cp1"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- Color swatch (anchored right, Winds UI style)
+		ColorPicker["cp2"] = Instance.new("Frame", ColorPicker["cp0"]);
+		ColorPicker["cp2"]["BorderSizePixel"] = 0;
+		ColorPicker["cp2"]["BackgroundColor3"] = ColorPicker.Color;
+		ColorPicker["cp2"]["AnchorPoint"] = Vector2.new(1, 0.5);
+		ColorPicker["cp2"]["Size"] = UDim2.new(0, 16, 0, 16);
+		ColorPicker["cp2"]["Position"] = UDim2.new(1, -12, 0.5, 0);
+		ColorPicker["cp2"]["Name"] = [[ColorSwatch]];
+		ColorPicker["cp2"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
+
+		local cpSwatch_c = Instance.new("UICorner", ColorPicker["cp2"]);
+		cpSwatch_c.CornerRadius = UDim.new(0, 4);
+
+		-- Hit button for swatch
+		ColorPicker["cp3"] = Instance.new("TextButton", ColorPicker["cp0"]);
+		ColorPicker["cp3"]["AutoButtonColor"] = false;
+		ColorPicker["cp3"]["ZIndex"] = 3;
+		ColorPicker["cp3"]["BackgroundTransparency"] = 1;
+		ColorPicker["cp3"]["Size"] = UDim2.new(0, 24, 0, 24);
+		ColorPicker["cp3"]["Position"] = UDim2.new(1, -32, 0.5, -12);
+		ColorPicker["cp3"]["Text"] = [[]];
+		ColorPicker["cp3"]["Name"] = [[Hit]];
+		ColorPicker["cp3"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
+		ColorPicker["cp3"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
+
+		-- Hover stroke on swatch
+		ColorPicker["cp2_s"] = Instance.new("UIStroke", ColorPicker["cp2"]);
+		ColorPicker["cp2_s"]["Transparency"] = 1;
+		ColorPicker["cp2_s"]["Color"] = Color3.fromRGB(70, 70, 86);
+
+		-- Hover effects
+		ColorPicker["cp3"].MouseEnter:Connect(function()
+			TweenService:Create(ColorPicker["cp2_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Transparency = 0.35
+			}):Play()
+		end)
+
+		ColorPicker["cp3"].MouseLeave:Connect(function()
+			TweenService:Create(ColorPicker["cp2_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Transparency = 1
+			}):Play()
+		end)
+
+		-- Click to open color picker
+		ColorPicker["cp3"].MouseButton1Click:Connect(function()
+			GUI.openColorPicker(ColorPicker["cp2"], function(color)
+				ColorPicker.Color = color
+				if options.callback then
+					options.callback(color)
+				end
+			end, ColorPicker.flag)
+		end)
+
+		-- Set flag
+		if ColorPicker.flag then
+			Library.Flags[ColorPicker.flag] = ColorPicker.Color
+		end
+
+		function ColorPicker:SetColor(color)
+			ColorPicker.Color = color
+			ColorPicker["cp2"].BackgroundColor3 = color
+			if ColorPicker.flag then
+				Library.Flags[ColorPicker.flag] = color
+			end
+			if options.callback then
+				options.callback(color)
+			end
+		end
+
+		function ColorPicker:GetColor()
+			return ColorPicker.Color
+		end
+
+		if ColorPicker.flag then
+			table.insert(GUI.Widgets, function()
+				local saved = Library.Flags[ColorPicker.flag]
+				if saved then
+					if typeof(saved) == "table" then
+						saved = Color3.new(saved.R or 1, saved.G or 1, saved.B or 1)
+					end
+					ColorPicker:SetColor(saved)
+				end
+			end)
+		end
+
+		return ColorPicker
+	end
+
+	function Tab:Create_TextBox(options)
+		options = Library:validate({name = 'TextBox', default = '...', placeholder = 'Enter text...', callback = nil, flag = nil, tab = nil, clearOnFocus = false, numeric = false}, options or {})
+
+		local TextBox = {
+			Value = (options.flag and Library.Flags[options.flag]) or options.default or '',
+			flag = options.flag
+		}
+
+		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+
+		-- Row container (same style as dropdown/toggle/slider rows)
+		TextBox["t70"] = Instance.new("Frame", parent)
+		TextBox["t70"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47)
+		-- TextBox["t70"]["Size"] = UDim2.new(1, 0, 0, 56)
+		TextBox["t70"]["Size"] = UDim2.new(1, 0, -0.088, 56)
+		TextBox["t70"]["Name"] = options.name .. "_textbox"
+		TextBox["t70"]["LayoutOrder"] = 0
+		TextBox["t70"]["BackgroundTransparency"] = 1
+		TextBox["t70"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0))
+		TextBox["t70"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		-- Divider on top (same style as slider dividers)
+		TextBox["t70_div"] = Instance.new("Frame", TextBox["t70"])
+		TextBox["t70_div"]["BorderSizePixel"] = 0
+		TextBox["t70_div"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47)
+		TextBox["t70_div"]["Size"] = UDim2.new(1, 0, 0, 1)
+		TextBox["t70_div"]["Position"] = UDim2.new(0, 0, 0, 0)
+		TextBox["t70_div"]["Name"] = [[Divider]]
+		TextBox["t70_div"]["BackgroundTransparency"] = 0.25
+		TextBox["t70_div"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0))
+		TextBox["t70_div"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0.25)
+
+		-- Label (same as dropdown)
+		TextBox["t71"] = Instance.new("TextLabel", TextBox["t70"])
+		TextBox["t71"]["TextSize"] = 12
+		TextBox["t71"]["TextXAlignment"] = Enum.TextXAlignment.Center
+		TextBox["t71"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+		TextBox["t71"]["TextColor3"] = Color3.fromRGB(143, 143, 154)
+		TextBox["t71"]["BackgroundTransparency"] = 1
+		TextBox["t71"]["Size"] = UDim2.new(1, 0, 0, 14)
+		-- TextBox["t71"]["Text"] = options.name
+		TextBox["t71"]["Text"] = ''
+		TextBox["t71"]["Name"] = [[Label]]
+		TextBox["t71"]["Position"] = UDim2.new(0, 0, 0, 6)
+		TextBox["t71"]:SetAttribute([[fadeOriginal_TextTransparency]], 0)
+		TextBox["t71"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		-- TextBox input frame (below the label, full width)
+		TextBox["t72"] = Instance.new("Frame", TextBox["t70"])
+		TextBox["t72"]["BorderSizePixel"] = 0
+		TextBox["t72"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47)
+		TextBox["t72"]["Size"] = UDim2.new(1, -28, 0, 24)
+		-- TextBox["t72"]["Position"] = UDim2.new(0, 14, 0, 24)
+		TextBox["t72"]["Position"] = UDim2.new(0, 14, 0, 12)
+		TextBox["t72"]["Name"] = [[InputFrame]]
+		TextBox["t72"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0)
+
+		-- Corner (same as dropdown button)
+		TextBox["t72_c"] = Instance.new("UICorner", TextBox["t72"])
+		TextBox["t72_c"]["CornerRadius"] = UDim.new(0, 6)
+
+		-- Shadow (same as dropdown button)
+		TextBox["t72_sh"] = Instance.new("UIShadow", TextBox["t72"])
+		TextBox["t72_sh"]:SetAttribute([[fadeOriginal_Transparency]], 0.55)
+
+		-- Hover stroke (same as dropdown button)
+		TextBox["t72_s"] = Instance.new("UIStroke", TextBox["t72"])
+		TextBox["t72_s"]["Transparency"] = 1
+		TextBox["t72_s"]["Color"] = Color3.fromRGB(70, 70, 86)
+		TextBox["t72_s"]:SetAttribute([[fadeOriginal_Transparency]], 1)
+
+		-- The actual TextBox input
+		TextBox["t73"] = Instance.new("TextBox", TextBox["t72"])
+		TextBox["t73"]["TextSize"] = 11
+		TextBox["t73"]["TextXAlignment"] = Enum.TextXAlignment.Center
+		TextBox["t73"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+		TextBox["t73"]["TextColor3"] = Color3.fromRGB(243, 243, 247)
+		TextBox["t73"]["BackgroundTransparency"] = 1
+		TextBox["t73"]["Size"] = UDim2.new(1, -16, 1, 0)
+		TextBox["t73"]["Text"] = TextBox.Value
+		TextBox["t73"]["PlaceholderText"] = options.placeholder
+		TextBox["t73"]["PlaceholderColor3"] = Color3.fromRGB(132, 132, 143)
+		TextBox["t73"]["Name"] = [[Input]]
+		TextBox["t73"]["Position"] = UDim2.new(0, 8, 0, 0)
+		TextBox["t73"]["TextTruncate"] = Enum.TextTruncate.AtEnd
+		TextBox["t73"]["ClearTextOnFocus"] = options.clearOnFocus
+		TextBox["t73"]["ZIndex"] = 2
+		if options.numeric then
+			TextBox["t73"]["Numeric"] = true
+		end
+		TextBox["t73"]:SetAttribute([[fadeOriginal_TextTransparency]], 0)
+		TextBox["t73"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+
+		local isFocused = false
+
+		TextBox["t73"].Focused:Connect(function()
+			isFocused = true
+			TweenService:Create(TextBox["t72_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Transparency = 0
+			}):Play()
+		end)
+
+		TextBox["t73"].FocusLost:Connect(function(enterPressed)
+			isFocused = false
+			TweenService:Create(TextBox["t72_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Transparency = 1
+			}):Play()
+
+			TextBox.Value = TextBox["t73"].Text
+			if TextBox.flag then
+				Library.Flags[TextBox.flag] = TextBox.Value
+				Library.save_flags()
+			end
+			if options.callback then
+				options.callback(TextBox.Value)
+			end
+		end)
+
+		-- Hover effects (same as dropdown button)
+		TextBox["t73"].MouseEnter:Connect(function()
+			TweenService:Create(TextBox["t72_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+				Transparency = 0.35
+			}):Play()
+		end)
+
+		TextBox["t73"].MouseLeave:Connect(function()
+			if not isFocused then
+				TweenService:Create(TextBox["t72_s"], TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+					Transparency = 1
+				}):Play()
+			end
+		end)
+
+		-- Set flag
+		if TextBox.flag and Library.Flags[TextBox.flag] == nil then
+			Library.Flags[TextBox.flag] = TextBox.Value
+		end
+
+		-- Auto-run callback on startup if there's a saved non-empty value
+		if TextBox.flag and Library.Flags[TextBox.flag] and Library.Flags[TextBox.flag] ~= '' and options.callback then
+			task.defer(function()
+				options.callback(Library.Flags[TextBox.flag])
+			end)
+		end
+
+		function TextBox:SetValue(value)
+			TextBox.Value = value
+			TextBox["t73"].Text = value
+			if TextBox.flag then
+				Library.Flags[TextBox.flag] = value
+			end
+			if options.callback then
+				options.callback(value)
+			end
+		end
+
+		function TextBox:GetValue()
+			return TextBox.Value
+		end
+
+		if TextBox.flag then
+			table.insert(GUI.Widgets, function()
+				if Library.Flags[TextBox.flag] ~= nil then
+					TextBox:SetValue(Library.Flags[TextBox.flag])
+				end
+			end)
+		end
+
+		return TextBox
+	end
+
+	function Tab:Create_Section(name, side)
+		-- Backwards compatibility:
+		--   Old: Create_Section('left')         -> first arg is side
+		--   New: Create_Section('Title', 'left') -> name + side
+		--   New: Create_Section('Title')        -> name only, side defaults to tab's section
+		local sectionName, sectionSide
+
+		if name == 'left' or name == 'right' then
+			sectionSide = name
+			sectionName = nil
+		else
+			sectionName = name
+			sectionSide = side or Tab.Section or 'left'
+		end
+
+		local Section = {
+			section = sectionSide,
+			Tab = Tab,
+			title = sectionName
+		}
+
+		-- Get or create a column wrapper for vertical stacking of sections
+		local wrapperKey = "_wrapper_" .. sectionSide
+		if not Tab[wrapperKey] then
+			Tab[wrapperKey] = Instance.new("Frame", GUI["2"])
+			Tab[wrapperKey].BorderSizePixel = 0
+			Tab[wrapperKey].BackgroundTransparency = 1
+			Tab[wrapperKey].AutomaticSize = Enum.AutomaticSize.Y
+			Tab[wrapperKey].Size = UDim2.new(0, 264, 0, 0)
+			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and 444 or 166, 0, 118)
+			Tab[wrapperKey].Name = (Tab["12"].Name or "Tab") .. "_" .. sectionSide .. "_wrapper"
+
+			local wrapperLayout = Instance.new("UIListLayout", Tab[wrapperKey])
+			wrapperLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			wrapperLayout.Padding = UDim.new(0, 8)
+
+			if not GUI.CurrentTabs[sectionSide] then
+				GUI.CurrentTabs[sectionSide] = Tab
+			end
+
+			Tab[wrapperKey].Visible = (GUI.CurrentTabs[sectionSide] == Tab)
+
+			table.insert(Tab.AllContainers, {container = Tab[wrapperKey], section = sectionSide})
+		end
+
+		local wrapper = Tab[wrapperKey]
+
+		-- Create per-section MainTitle if a name is provided
+		if sectionName then
+			Section.MainTitle = Instance.new("TextLabel", wrapper)
+			Section.MainTitle.TextSize = 13
+			Section.MainTitle.TextXAlignment = Enum.TextXAlignment.Left
+			Section.MainTitle.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+			Section.MainTitle.TextColor3 = Color3.fromRGB(243, 243, 247)
+			Section.MainTitle.BackgroundTransparency = 1
+			Section.MainTitle.Size = UDim2.new(0, 200, 0, 16)
+			Section.MainTitle.Text = sectionName
+			Section.MainTitle.Name = "MainTitle"
+			Section.MainTitle:SetAttribute("fadeOriginal_TextTransparency", 0)
+			Section.MainTitle:SetAttribute("fadeOriginal_BackgroundTransparency", 1)
+		end
+
+		-- Content container (child of wrapper for automatic vertical stacking)
+		Section.ContentContainer = Instance.new("Frame", wrapper)
+		Section.ContentContainer.BorderSizePixel = 0
+		Section.ContentContainer.BackgroundColor3 = Color3.fromRGB(14, 15, 20)
+		Section.ContentContainer.AutomaticSize = Enum.AutomaticSize.Y
+		Section.ContentContainer.Size = UDim2.new(0, 264, 0, 0)
+		Section.ContentContainer.Name = (Tab["12"].Name or "Tab") .. "_" .. sectionSide .. "_content"
+		Section.ContentContainer:SetAttribute("fadeOriginal_BackgroundTransparency", 0)
+		Section.ContentContainer.Visible = true  -- Visibility handled by wrapper
+
+		local sectionCorner = Instance.new("UICorner", Section.ContentContainer)
+		sectionCorner.CornerRadius = UDim.new(0, 10)
+
+		local sectionShadow = Instance.new("UIShadow", Section.ContentContainer)
+		sectionShadow:SetAttribute("fadeOriginal_Transparency", 0.55)
+
+		local sectionLayout = Instance.new("UIListLayout", Section.ContentContainer)
+		sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+		function Section:Create_Toggle(opts)
+			opts = opts or {}
+			opts.tab = Section
+			return Tab:Create_Toggle(opts)
+		end
+
+		function Section:Create_Slider(opts)
+			opts = opts or {}
+			opts.tab = Section
+			return Tab:Create_Slider(opts)
+		end
+
+		function Section:Create_Dropdown(opts)
+			opts = opts or {}
+			opts.tab = Section
+			return Tab:Create_Dropdown(opts)
+		end
+
+		function Section:Create_ColorPicker(opts)
+			opts = opts or {}
+			opts.tab = Section
+			return Tab:Create_ColorPicker(opts)
+		end
+
+		function Section:Create_TextBox(opts)
+			opts = opts or {}
+			opts.tab = Section
+			return Tab:Create_TextBox(opts)
+		end
+
+		return Section
+	end
+
+	return Tab
+end
+
+function Library:Notify(title, text, dur)
+	dur = dur or 4
+
+	local UI_Notification = {}
+
+	UI_Notification["1"] = Instance.new("ScreenGui")
+	UI_Notification["1"].Name = "Zenthra Notification"
+	UI_Notification["1"].ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	UI_Notification["1"].Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+	UI_Notification["2"] = Instance.new("Frame", UI_Notification["1"])
+	UI_Notification["2"].Name = "Notifications"
+	UI_Notification["2"].Size = UDim2.new(0, 230, 0, 400)
+	UI_Notification["2"].Position = UDim2.new(1, -16, 1, -16)
+	UI_Notification["2"].AnchorPoint = Vector2.new(1, 1)
+	UI_Notification["2"].BackgroundTransparency = 1
+	UI_Notification["2"].ZIndex = 10
+
+	local Layout = Instance.new("UIListLayout", UI_Notification["2"])
+	Layout.SortOrder = Enum.SortOrder.LayoutOrder
+	Layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	Layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	Layout.Padding = UDim.new(0, 8)
+
+	-- Template (your original UI_Notification["4"])
+	UI_Notification["4"] = Instance.new("Frame")
+	UI_Notification["4"].Size = UDim2.fromOffset(230, 52)
+	UI_Notification["4"].BackgroundTransparency = 1
+	UI_Notification["4"].ZIndex = 10
+
+	local Card = Instance.new("Frame", UI_Notification["4"])
+	Card.Size = UDim2.new(1, 0, 1, 0)
+	Card.BackgroundColor3 = Color3.fromRGB(35, 35, 38)
+	Card.ZIndex = 10
+	Card.Position = UDim2.fromOffset(260, 0) -- slide-in start
+	Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 10)
+
+	local Icon_Frame = Instance.new("Frame", Card)
+	Icon_Frame.Position = UDim2.fromOffset(12, 14)
+	Icon_Frame.Size = UDim2.fromOffset(24, 24)
+	Icon_Frame.BackgroundColor3 = Color3.fromRGB(47, 47, 50)
+	Icon_Frame.ZIndex = 11
+	Instance.new("UICorner", Icon_Frame).CornerRadius = UDim.new(0, 6)
+
+	local Icon_Label = Instance.new("TextLabel", Icon_Frame)
+	Icon_Label.BackgroundTransparency = 1
+	Icon_Label.Size = UDim2.fromScale(1, 1)
+	Icon_Label.Font = Enum.Font.GothamBold
+	Icon_Label.Text = "i"
+	Icon_Label.TextSize = 12
+	Icon_Label.TextColor3 = Color3.fromRGB(236, 236, 236)
+	Icon_Label.ZIndex = 12
+
+	local Title_Label = Instance.new("TextLabel", Card)
+	Title_Label.BackgroundTransparency = 1
+	Title_Label.Position = UDim2.fromOffset(46, 12)
+	Title_Label.Size = UDim2.new(1, -58, 0, 14)
+	Title_Label.Font = Enum.Font.GothamBold
+	Title_Label.Text = title
+	Title_Label.TextSize = 12
+	Title_Label.TextColor3 = Color3.fromRGB(236, 236, 236)
+	Title_Label.TextXAlignment = Enum.TextXAlignment.Left
+	Title_Label.ZIndex = 11
+
+	local Track = Instance.new("Frame", Card)
+	Track.Name = "track"
+	Track.Position = UDim2.fromOffset(46, 34)
+	Track.Size = UDim2.new(1, -60, 0, 3)
+	Track.BackgroundColor3 = Color3.fromRGB(56, 56, 59)
+	Track.BorderSizePixel = 0
+	Track.ZIndex = 11
+	Instance.new("UICorner", Track).CornerRadius = UDim.new(0, 2)
+
+	local Fill = Instance.new("Frame", Track)
+	Fill.Name = "fill"
+	Fill.Size = UDim2.fromScale(1, 1)
+	Fill.BackgroundColor3 = Color3.fromRGB(236, 236, 236)
+	Fill.BorderSizePixel = 0
+	Fill.ZIndex = 12
+
+	Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 2)
+
+	-- Clone template
+	local Notification = UI_Notification["4"]:Clone()
+	Notification.Parent = UI_Notification["2"]
+	Notification.Visible = true
+
+	local Card_Clone = Notification:FindFirstChildOfClass("Frame")
+	local Track_Clone = Card_Clone:FindFirstChild("track")
+	local Fill_Clone = Track_Clone and Track_Clone:FindFirstChild("fill")
+
+	-- Animate bar drain
+	if Fill_Clone then
+		game:GetService("TweenService"):Create(
+			Fill_Clone,
+			TweenInfo.new(dur, Enum.EasingStyle.Linear),
+			{ Size = UDim2.new(0, 0, 1, 0) }
+		):Play()
+	end
+
+	-- Slide-in animation
+	game:GetService("TweenService"):Create(
+		Card_Clone,
+		TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Position = UDim2.fromOffset(0, 0) }
+	):Play()
+
+	-- Slide-out + collapse
+	task.delay(dur, function()
+		local out = game:GetService("TweenService"):Create(
+			Card_Clone,
+			TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{ Position = UDim2.fromOffset(260, 0) }
+		)
+		out:Play()
+
+		out.Completed:Once(function()
+			local collapse = game:GetService("TweenService"):Create(
+				Notification,
+				TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Size = UDim2.fromOffset(230, 0) }
+			)
+			collapse:Play()
+
+			collapse.Completed:Once(function()
+				Notification:Destroy()
+			end)
+		end)
+	end)
+end
