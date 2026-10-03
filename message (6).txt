@@ -1124,7 +1124,7 @@ function Library.new()
 					Library.save_flags()
 					-- Reset Library.ToggleKey to default when Show/Hide keybind is cleared
 					if toggle.flag == "Show_Hide_UI_Keybind" then
-						Library.ToggleKey = Enum.KeyCode.LeftControl
+						Library.ToggleKey = Enum.KeyCode.RightControl
 					end
 				end
 				if toggle["72_text"] then
@@ -1232,11 +1232,11 @@ function Library.new()
 
 		for toggle, bind in pairs(Library.Keybinds) do
 			if bind.key == key then
-				-- Skip gpe check for keybinds without a flag (UI-only keybinds
-				-- like Show/Hide) so modifier keys (Alt, Ctrl) still work.
-				-- For game-action keybinds (with a flag), respect gpe to avoid
-				-- triggering while typing in chat/textboxes.
-				if gpe and toggle.flag then
+				-- Skip gpe check for keybinds marked with _skipGPE (like
+				-- Show/Hide UI) so modifier keys (Alt, Ctrl) still work.
+				-- For normal keybinds, respect gpe to avoid triggering
+				-- while typing in chat/textboxes.
+				if gpe and not toggle._skipGPE then
 					continue
 				end
 
