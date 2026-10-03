@@ -2979,6 +2979,251 @@ function Library:Create_Tab(options)
 		Tab["14"].TextColor3 = Color3.fromRGB(255, 255, 255)
 	end
 
+	function Tab:Create_Button(options)
+		options = Library:validate({name = 'Button', callback = nil, tab = nil}, options or {})
+
+		local Button = {}
+
+		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+
+		Button["b0"] = Instance.new("Frame", parent)
+		Button["b0"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47)
+		Button["b0"]["Size"] = UDim2.new(1, 0, 0, 38)
+		Button["b0"]["Name"] = options.name .. "_button"
+		Button["b0"]["LayoutOrder"] = 0
+		Button["b0"]["BackgroundTransparency"] = 1
+		Button["b0"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0))
+		Button["b0"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		Button["b1"] = Instance.new("TextLabel", Button["b0"])
+		Button["b1"]["TextSize"] = 12
+		Button["b1"]["TextXAlignment"] = Enum.TextXAlignment.Left
+		Button["b1"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+		Button["b1"]["TextColor3"] = Color3.fromRGB(143, 143, 154)
+		Button["b1"]["BackgroundTransparency"] = 1
+		Button["b1"]["Size"] = UDim2.new(0, 200, 0, 38)
+		Button["b1"]["Text"] = options.name
+		Button["b1"]["Name"] = [[Label]]
+		Button["b1"]["Position"] = UDim2.new(0, 14, 0, 0)
+		Button["b1"]:SetAttribute([[fadeOriginal_TextTransparency]], 0)
+		Button["b1"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		Button["b2"] = Instance.new("ImageLabel", Button["b0"])
+		Button["b2"]["BorderSizePixel"] = 0
+		Button["b2"]["ScaleType"] = Enum.ScaleType.Fit
+		Button["b2"]["Image"] = [[rbxassetid://10709768347]]
+		Button["b2"]["ImageColor3"] = Color3.fromRGB(143, 143, 154)
+		Button["b2"]["AnchorPoint"] = Vector2.new(1, 0.5)
+		Button["b2"]["Size"] = UDim2.new(0, 14, 0, 14)
+		Button["b2"]["Position"] = UDim2.new(1, -14, 0.5, 0)
+		Button["b2"]["BackgroundTransparency"] = 1
+		Button["b2"]["Name"] = [[IMG_Arrow]]
+		Button["b2"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0)
+		Button["b2"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		Button["b3"] = Instance.new("TextButton", Button["b0"])
+		Button["b3"]["AutoButtonColor"] = false
+		Button["b3"]["ZIndex"] = 2
+		Button["b3"]["BackgroundTransparency"] = 1
+		Button["b3"]["Size"] = UDim2.new(1, 0, 1, 0)
+		Button["b3"]["Text"] = [[]]
+		Button["b3"]["Name"] = [[Hit]]
+		Button["b3"]:SetAttribute([[fadeOriginal_TextTransparency]], 0)
+		Button["b3"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		Button["b3"].MouseEnter:Connect(function()
+			TweenService:Create(Button["b1"], TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(243, 243, 247)}):Play()
+			TweenService:Create(Button["b2"], TweenInfo.new(0.15), {ImageColor3 = Color3.fromRGB(243, 243, 247)}):Play()
+		end)
+
+		Button["b3"].MouseLeave:Connect(function()
+			TweenService:Create(Button["b1"], TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(143, 143, 154)}):Play()
+			TweenService:Create(Button["b2"], TweenInfo.new(0.15), {ImageColor3 = Color3.fromRGB(143, 143, 154)}):Play()
+		end)
+
+		Button["b3"].MouseButton1Click:Connect(function()
+			TweenService:Create(Button["b1"], TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(125, 109, 247)}):Play()
+			task.delay(0.15, function()
+				TweenService:Create(Button["b1"], TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(143, 143, 154)}):Play()
+			end)
+			if options.callback then
+				options.callback()
+			end
+		end)
+
+		return Button
+	end
+
+	function Tab:Create_Keybind(options)
+		options = Library:validate({name = 'Keybind', flag = nil, callback = nil, tab = nil}, options or {})
+
+		local KeybindWidget = {
+			flag = options.flag,
+			Keybind = nil,
+			KeybindName = nil,
+			KeybindMode = "toggle",
+		}
+
+		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+
+		KeybindWidget["k0"] = Instance.new("Frame", parent)
+		KeybindWidget["k0"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47)
+		KeybindWidget["k0"]["Size"] = UDim2.new(1, 0, 0, 38)
+		KeybindWidget["k0"]["Name"] = options.name .. "_keybind"
+		KeybindWidget["k0"]["LayoutOrder"] = 0
+		KeybindWidget["k0"]["BackgroundTransparency"] = 1
+		KeybindWidget["k0"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0))
+		KeybindWidget["k0"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		KeybindWidget["k1"] = Instance.new("TextLabel", KeybindWidget["k0"])
+		KeybindWidget["k1"]["TextSize"] = 12
+		KeybindWidget["k1"]["TextXAlignment"] = Enum.TextXAlignment.Left
+		KeybindWidget["k1"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+		KeybindWidget["k1"]["TextColor3"] = Color3.fromRGB(143, 143, 154)
+		KeybindWidget["k1"]["BackgroundTransparency"] = 1
+		KeybindWidget["k1"]["Size"] = UDim2.new(0, 200, 0, 38)
+		KeybindWidget["k1"]["Text"] = options.name
+		KeybindWidget["k1"]["Name"] = [[Label]]
+		KeybindWidget["k1"]["Position"] = UDim2.new(0, 14, 0, 0)
+		KeybindWidget["k1"]:SetAttribute([[fadeOriginal_TextTransparency]], 0)
+		KeybindWidget["k1"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		KeybindWidget["72"] = Instance.new("Frame", KeybindWidget["k0"])
+		KeybindWidget["72"]["BorderSizePixel"] = 0
+		KeybindWidget["72"]["BackgroundColor3"] = Color3.fromRGB(22, 23, 31)
+		KeybindWidget["72"]["AnchorPoint"] = Vector2.new(1, 0.5)
+		KeybindWidget["72"]["AutomaticSize"] = Enum.AutomaticSize.X
+		KeybindWidget["72"]["Size"] = UDim2.new(0, 0, 0, 22)
+		KeybindWidget["72"]["Position"] = UDim2.new(1, -12, 0.5, 0)
+		KeybindWidget["72"]["Name"] = [[KeybindBadge]]
+		KeybindWidget["72"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0)
+
+		Instance.new("UICorner", KeybindWidget["72"]).CornerRadius = UDim.new(0, 7)
+
+		local kbPad = Instance.new("UIPadding", KeybindWidget["72"])
+		kbPad.PaddingLeft = UDim.new(0, 6)
+		kbPad.PaddingRight = UDim.new(0, 6)
+
+		local kbMax = Instance.new("UISizeConstraint", KeybindWidget["72"])
+		kbMax.MaxSize = Vector2.new(60, 22)
+
+		KeybindWidget["72_text"] = Instance.new("TextLabel", KeybindWidget["72"])
+		KeybindWidget["72_text"]["TextSize"] = 12
+		KeybindWidget["72_text"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+		KeybindWidget["72_text"]["TextColor3"] = Color3.fromRGB(138, 138, 148)
+		KeybindWidget["72_text"]["BackgroundTransparency"] = 1
+		KeybindWidget["72_text"]["Size"] = UDim2.new(1, 0, 1, 0)
+		KeybindWidget["72_text"]["Text"] = [[···]]
+		KeybindWidget["72_text"]["Name"] = [[Text]]
+
+		KeybindWidget["73"] = Instance.new("TextButton", KeybindWidget["k0"])
+		KeybindWidget["73"]["AutoButtonColor"] = false
+		KeybindWidget["73"]["ZIndex"] = 4
+		KeybindWidget["73"]["BackgroundTransparency"] = 1
+		KeybindWidget["73"]["Size"] = UDim2.new(0, 44, 0, 26)
+		KeybindWidget["73"]["Text"] = [[]]
+		KeybindWidget["73"]["Name"] = [[Keybind_Hit]]
+		KeybindWidget["73"]["Position"] = UDim2.new(1, -12, 0.5, 0)
+		KeybindWidget["73"]["AnchorPoint"] = Vector2.new(1, 0.5)
+		KeybindWidget["73"]:SetAttribute([[fadeOriginal_TextTransparency]], 0)
+		KeybindWidget["73"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1)
+
+		Instance.new("UICorner", KeybindWidget["73"]).CornerRadius = UDim.new(0, 7)
+
+		KeybindWidget["73_s"] = Instance.new("UIStroke", KeybindWidget["73"])
+		KeybindWidget["73_s"]["Transparency"] = 1
+		KeybindWidget["73_s"]["Color"] = Color3.fromRGB(125, 109, 247)
+
+		KeybindWidget._callback = options.callback
+
+		KeybindWidget['73'].MouseButton1Click:Connect(function()
+			if GUI["kpw"] then
+				local Keybinds_Picker = GUI["kpw"]
+				if Keybinds_Picker.Visible and GUI.ActiveKeybindToggle ~= KeybindWidget then
+					Keybinds_Picker.Visible = false
+					Keybinds_Picker.Size = UDim2.new(0, 0, 0, 0)
+					GUI.WaitingForKey = false
+				end
+				if not Keybinds_Picker.Visible then
+					GUI.ActiveKeybindToggle = KeybindWidget
+					GUI.WaitingForKey = false
+					Keybinds_Picker.Size = UDim2.new(0, 0, 0, 0)
+					Keybinds_Picker.Visible = true
+					local btnPos = KeybindWidget["72"].AbsolutePosition
+					local btnSize = KeybindWidget["72"].AbsoluteSize
+					local parentPos = GUI["1"].AbsolutePosition
+					local pickerX = (btnPos.X - parentPos.X) - 150 - 8
+					local pickerY = (btnPos.Y - parentPos.Y) + (btnSize.Y - 76) / 2
+					Keybinds_Picker.Position = UDim2.new(0, pickerX, 0, pickerY)
+					if KeybindWidget.Keybind then
+						GUI["kpw_nbf_p"].Text = KeybindWidget.KeybindName or "New bind"
+						GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(243, 243, 247)
+						TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 0}):Play()
+					else
+						GUI["kpw_nbf_p"].Text = "New bind"
+						GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(138, 138, 148)
+						TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+					end
+					local mode = KeybindWidget.KeybindMode or "toggle"
+					if mode == "toggle" then
+						GUI["kpw_ms"].Position = UDim2.new(0, 8, 0, 42)
+						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(244, 244, 248)
+					else
+						GUI["kpw_ms"].Position = UDim2.new(0, 77, 0, 42)
+						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(244, 244, 248)
+						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+					end
+					TweenService:Create(Keybinds_Picker, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 150, 0, 76)}):Play()
+				else
+					GUI.closeKeybindPicker()
+				end
+			end
+		end)
+
+		KeybindWidget['73'].MouseButton2Click:Connect(function()
+			if KeybindWidget.Keybind then
+				KeybindWidget.Keybind = nil
+				KeybindWidget.KeybindName = nil
+				Library.Keybinds[KeybindWidget] = nil
+				if KeybindWidget.flag then
+					Library.Flags[KeybindWidget.flag .. "_keybind"] = nil
+					Library.save_flags()
+				end
+				KeybindWidget["72_text"].Text = "···"
+				KeybindWidget["72_text"].TextColor3 = Color3.fromRGB(138, 138, 148)
+				TweenService:Create(KeybindWidget["73_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+			end
+		end)
+
+		if KeybindWidget.flag and Library.Flags[KeybindWidget.flag .. "_keybind"] then
+			local saved = Library.Flags[KeybindWidget.flag .. "_keybind"]
+			local key
+			if saved.keyType == "KeyCode" then
+				key = Enum.KeyCode[saved.keyName]
+			elseif saved.keyType == "UserInputType" then
+				key = Enum.UserInputType[saved.keyName]
+			end
+			if key then
+				KeybindWidget.Keybind = key
+				KeybindWidget.KeybindName = saved.displayName or key.Name
+				KeybindWidget.KeybindMode = saved.mode or "toggle"
+				Library.Keybinds[KeybindWidget] = { key = key, mode = KeybindWidget.KeybindMode, flag = KeybindWidget.flag }
+				KeybindWidget["72_text"].Text = KeybindWidget.KeybindName
+				KeybindWidget["72_text"].TextColor3 = Color3.fromRGB(125, 109, 247)
+				KeybindWidget["73_s"].Transparency = 0
+			end
+		end
+
+		function KeybindWidget:Toggle(state)
+			if KeybindWidget._callback then
+				KeybindWidget._callback()
+			end
+		end
+
+		return KeybindWidget
+	end
+
 	function Tab:Create_Toggle(options)
 		local Toggle = {
 			State = false,
@@ -4505,6 +4750,18 @@ function Library:Create_Tab(options)
 			opts = opts or {}
 			opts.tab = Section
 			return Tab:Create_TextBox(opts)
+		end
+
+		function Section:Create_Button(opts)
+			opts = opts or {}
+			opts.tab = Section
+			return Tab:Create_Button(opts)
+		end
+
+		function Section:Create_Keybind(opts)
+			opts = opts or {}
+			opts.tab = Section
+			return Tab:Create_Keybind(opts)
 		end
 
 		return Section
