@@ -1122,6 +1122,10 @@ function Library.new()
 				if toggle.flag then
 					Library.Flags[toggle.flag .. "_keybind"] = nil
 					Library.save_flags()
+					-- Reset Library.ToggleKey to default when Show/Hide keybind is cleared
+					if toggle.flag == "Show_Hide_UI_Keybind" then
+						Library.ToggleKey = Enum.KeyCode.LeftControl
+					end
 				end
 				if toggle["72_text"] then
 					toggle["72_text"].Text = "···"
@@ -1165,6 +1169,11 @@ function Library.new()
 			mode = toggle.KeybindMode,
 			flag = toggle.flag
 		}
+
+		-- Sync Library.ToggleKey when the Show/Hide keybind changes
+		if toggle.flag == "Show_Hide_UI_Keybind" then
+			Library.ToggleKey = key
+		end
 
 		-- Save keybind to flags
 		if toggle.flag then
