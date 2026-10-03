@@ -1553,6 +1553,20 @@ function Library.new()
 
 	GUI.closeColorPicker = cpClose
 
+	-- Reusable close function for keybind picker
+	local function kpClose()
+		if not GUI["kpw"].Visible then return end
+		GUI.WaitingForKey = false
+		TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
+		local closeTween = TweenService:Create(GUI["kpw"], TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, 0)})
+		closeTween.Completed:Once(function()
+			GUI["kpw"].Visible = false
+		end)
+		closeTween:Play()
+	end
+
+	GUI.closeKeybindPicker = kpClose
+
 	local function cpOpen(swatch, callback, flag)
 		if GUI["cpw"].Visible and cpState.currentTarget and cpState.currentTarget.swatch == swatch then
 			cpClose()
@@ -1709,6 +1723,34 @@ function Library.new()
 			cpState.alpha = if a ~= '' then tonumber(a, 16) / 255 else 1
 		end
 		cpRender()
+	end)
+
+	-- Click-outside detection for keybind picker
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			if GUI["kpw"].Visible and GUI.ActiveKeybindToggle and not GUI.WaitingForKey then
+				local mousePos = input.Position
+				local popupRect = GUI["kpw"].AbsolutePosition
+				local popupSize = GUI["kpw"].AbsoluteSize
+
+				local inPopup = mousePos.X >= popupRect.X and mousePos.X <= popupRect.X + popupSize.X
+					and mousePos.Y >= popupRect.Y and mousePos.Y <= popupRect.Y + popupSize.Y
+
+				-- Also check if clicking on the ··· button itself (that toggle handles open/close)
+				local inButton = false
+				local toggle = GUI.ActiveKeybindToggle
+				if toggle and toggle["72"] then
+					local btnPos = toggle["72"].AbsolutePosition
+					local btnSize = toggle["72"].AbsoluteSize
+					inButton = mousePos.X >= btnPos.X and mousePos.X <= btnPos.X + btnSize.X
+						and mousePos.Y >= btnPos.Y and mousePos.Y <= btnPos.Y + btnSize.Y
+				end
+
+				if not inPopup and not inButton then
+					GUI.closeKeybindPicker()
+				end
+			end
+		end
 	end)
 
 	-- Click-outside detection for color picker
@@ -3154,6 +3196,13 @@ function Library:Create_Tab(options)
 			if GUI["kpw"] then
 				local Keybinds_Picker = GUI["kpw"]
 
+				-- If picker is open for a DIFFERENT toggle, close it first then open for this one
+				if Keybinds_Picker.Visible and GUI.ActiveKeybindToggle ~= Toggle then
+					Keybinds_Picker.Visible = false
+					Keybinds_Picker.Size = UDim2.new(0, 0, 0, 0)
+					GUI.WaitingForKey = false
+				end
+
 				if not Keybinds_Picker.Visible then
 					-- Opening
 					GUI.ActiveKeybindToggle = Toggle
@@ -3162,13 +3211,16 @@ function Library:Create_Tab(options)
 					Keybinds_Picker.Size = UDim2.new(0, 0, 0, 0)
 					Keybinds_Picker.Visible = true
 
-					local togglePos = Toggle["70"].AbsolutePosition
+					-- Position the picker directly next to the ··· button
+					local btnPos = Toggle["72"].AbsolutePosition
+					local btnSize = Toggle["72"].AbsoluteSize
 					local parentPos = GUI["1"].AbsolutePosition
-					local toggleSize = Toggle["70"].AbsoluteSize
 					local pickerWidth = 150
 					local pickerHeight = 76
-					local pickerX = (togglePos.X - parentPos.X) + toggleSize.X - 52 - 20 - 5 - pickerWidth
-					local pickerY = (togglePos.Y - parentPos.Y) + (toggleSize.Y - pickerHeight) / 2
+
+					-- Place to the left of the ··· button, vertically centered
+					local pickerX = (btnPos.X - parentPos.X) - pickerWidth - 8
+					local pickerY = (btnPos.Y - parentPos.Y) + (btnSize.Y - pickerHeight) / 2
 
 					Keybinds_Picker.Position = UDim2.new(0, pickerX, 0, pickerY)
 
@@ -3198,13 +3250,7 @@ function Library:Create_Tab(options)
 					TweenService:Create(Keybinds_Picker, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 150, 0, 76)}):Play()
 				else
 					-- Closing
-					GUI.WaitingForKey = false
-					TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 1}):Play()
-					local closeTween = TweenService:Create(Keybinds_Picker, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, 0)})
-					closeTween.Completed:Once(function()
-						Keybinds_Picker.Visible = false
-					end)
-					closeTween:Play()
+					GUI.closeKeybindPicker()
 				end
 			end
 		end)
