@@ -1215,10 +1215,6 @@ function Library.new()
 		local key = getKeyName(input)
 		if key == nil then return end
 
-		if gpe then
-			return
-		end
-
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			if MovementKeys[input.KeyCode] then
 				return
@@ -1226,9 +1222,16 @@ function Library.new()
 		end
 
 		for toggle, bind in pairs(Library.Keybinds) do
-			if bind.key == key and toggle.flag then
+			if bind.key == key then
+				-- Skip gpe check for keybinds without a flag (UI-only keybinds
+				-- like Show/Hide) so modifier keys (Alt, Ctrl) still work.
+				-- For game-action keybinds (with a flag), respect gpe to avoid
+				-- triggering while typing in chat/textboxes.
+				if gpe and toggle.flag then
+					continue
+				end
+
 				if bind.mode == "toggle" then
-					-- Only trigger on the actual key press, not repeats
 					if not toggle._keybindHeld then
 						toggle._keybindHeld = true
 						pcall(function() toggle:Toggle() end)
@@ -1961,11 +1964,9 @@ function Library.new()
 
 	-- Show/Hide toggle key is configurable via Library.ToggleKey (set from v1.lua)
 	-- Defaults to RightAlt if not set
+	-- NOTE: No gpe guard here because modifier keys (Alt, Ctrl) are always
+	-- marked as gameProcessed by Roblox, and the UI toggle must work regardless.
 	UIS.InputBegan:Connect(function(input, gp)
-		if gp then
-			return
-		end
-
 		local toggleKey = Library.ToggleKey or Enum.KeyCode.RightAlt
 		if input.KeyCode == toggleKey then
 			if Main_GUI.Enabled then
