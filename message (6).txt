@@ -2102,8 +2102,8 @@ function Library.new()
 		local searchScrollLeft = Instance.new("ScrollingFrame", GUI["2"])
 		searchScrollLeft.BorderSizePixel = 0
 		searchScrollLeft.BackgroundTransparency = 1
-		searchScrollLeft.Size = UDim2.new(0, 264, 0, 322)
-		searchScrollLeft.Position = UDim2.new(0, 166, 0, 118)
+		searchScrollLeft.Size = UDim2.new(0, 264, 0, 332)
+		searchScrollLeft.Position = UDim2.new(0, 166, 0, 100)
 		searchScrollLeft.ScrollBarThickness = 2
 		searchScrollLeft.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
 		-- searchScrollLeft.ScrollBarBackgroundTransparency = 1
@@ -2119,8 +2119,8 @@ function Library.new()
 		local searchScrollRight = Instance.new("ScrollingFrame", GUI["2"])
 		searchScrollRight.BorderSizePixel = 0
 		searchScrollRight.BackgroundTransparency = 1
-		searchScrollRight.Size = UDim2.new(0, 264, 0, 322)
-		searchScrollRight.Position = UDim2.new(0, 444, 0, 118)
+		searchScrollRight.Size = UDim2.new(0, 264, 0, 332)
+		searchScrollRight.Position = UDim2.new(0, 444, 0, 100)
 		searchScrollRight.ScrollBarThickness = 2
 		searchScrollRight.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
 		-- searchScrollRight.ScrollBarBackgroundTransparency = 1
@@ -2184,7 +2184,7 @@ function Library.new()
 
 						local sec = entry.section
 						entry.container.Visible = (tab == GUI.CurrentTabs[sec])
-						entry.container.Position = UDim2.new(0, sec == 'right' and 444 or 166, 0, 118)
+						entry.container.Position = UDim2.new(0, sec == 'right' and 444 or 166, 0, 96)
 					end
 				end
 			else
@@ -4708,7 +4708,7 @@ function Library:Create_Tab(options)
 
 			local wrapperLayout = Instance.new("UIListLayout", Tab[wrapperKey])
 			wrapperLayout.SortOrder = Enum.SortOrder.LayoutOrder
-			wrapperLayout.Padding = UDim.new(0, 8)
+			wrapperLayout.Padding = UDim.new(0, 10)
 
 			if not GUI.CurrentTabs[sectionSide] then
 				GUI.CurrentTabs[sectionSide] = Tab
@@ -4741,6 +4741,20 @@ function Library:Create_Tab(options)
 
 		local sectionLayout = Instance.new("UIListLayout", Section.ContentContainer)
 		sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+		-- space under the last row so it doesn't touch the card's rounded bottom
+		local cardPad = Instance.new("UIPadding", Section.ContentContainer)
+		cardPad.PaddingBottom = UDim.new(0, 6)
+
+		-- labels sit 14px from the left, but right-anchored controls sat 12px from the right.
+		-- 2px of right padding on every row makes both edges 14px.
+		Section.ContentContainer.ChildAdded:Connect(function(row)
+			if row:IsA("Frame") then
+				local rowPad = Instance.new("UIPadding")
+				rowPad.PaddingRight = UDim.new(0, 2)
+				rowPad.Parent = row
+			end
+		end)
 
 		-- Header lives inside the card (LayoutOrder -1 keeps it above every widget row)
 		if sectionName then
