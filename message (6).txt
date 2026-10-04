@@ -329,7 +329,7 @@ function Library.new()
 	GUI["2"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
 	-- StarterGui.Byte_UI.Main_Menu_Window.UICorner
 	GUI["3"] = Instance.new("UICorner", GUI["2"]);
-	GUI["3"]["CornerRadius"] = UDim.new(0, 14);
+	GUI["3"]["CornerRadius"] = UDim.new(0, 20);
 
 	-- floating outline around the window + left panel (panel sticks out 27px on the left)
 	GUI["outline"] = Instance.new("Frame", GUI["2"])
