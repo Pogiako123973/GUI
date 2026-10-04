@@ -3629,6 +3629,7 @@ function Library:Create_Tab(options)
 		Slider["7a"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
 		Slider["7a"]["Size"] = UDim2.new(1, 0, 0, 1);
 		Slider["7a"]["Name"] = [[Divider_3]];
+		Slider["7a"].Visible = false;
 		Slider["7a"]["LayoutOrder"] = 3;
 		Slider["7a"]["BackgroundTransparency"] = 0.25;
 		-- Attributes
@@ -3757,6 +3758,7 @@ function Library:Create_Tab(options)
 		Slider["86"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
 		Slider["86"]["Size"] = UDim2.new(1, 0, 0, 1);
 		Slider["86"]["Name"] = [[Divider_5]];
+		Slider["86"].Visible = false;
 		Slider["86"]["LayoutOrder"] = 5;
 		Slider["86"]["BackgroundTransparency"] = 0.25;
 		-- Attributes
@@ -4525,6 +4527,7 @@ function Library:Create_Tab(options)
 		TextBox["t70_div"]["Size"] = UDim2.new(1, 0, 0, 1)
 		TextBox["t70_div"]["Position"] = UDim2.new(0, 0, 0, 0)
 		TextBox["t70_div"]["Name"] = [[Divider]]
+		TextBox["t70_div"].Visible = false
 		TextBox["t70_div"]["BackgroundTransparency"] = 0.25
 		TextBox["t70_div"]:SetAttribute([[staggerBase]], UDim2.new(0, 0, 0, 0))
 		TextBox["t70_div"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0.25)
