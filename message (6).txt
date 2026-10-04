@@ -1,3 +1,4 @@
+local COL_L, COL_R, COL_Y, COL_H = 190, 468, 98, 328
 local UI_Connections = {}
 local Is_Mobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 
@@ -348,8 +349,8 @@ function Library.new()
 	GUI["5"] = Instance.new("Frame", GUI["2"]);
 	GUI["5"]["BorderSizePixel"] = 0;
 	GUI["5"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
-	GUI["5"]["Size"] = UDim2.new(0, 180, 1, -16);
-	GUI["5"]["Position"] = UDim2.new(-0.03755, 0, 0.01818, 0);
+	GUI["5"]["Size"] = UDim2.new(0, 168, 1, -16);
+	GUI["5"]["Position"] = UDim2.new(0, 8, 0, 8);
 	GUI["5"]["Name"] = [[left_panel]];
 	GUI["5"]["BackgroundTransparency"] = 0.04;
 	-- Attributes
@@ -389,6 +390,16 @@ function Library.new()
 	GUI["8"]["BackgroundTransparency"] = 1;
 	GUI["8"]["Name"] = [[IMG_Logo]];
 	GUI["8"]["Position"] = UDim2.new(0, 18, 0, 14);
+    GUI["8"].Visible = false
+    local Brand = Instance.new("TextLabel", GUI["5"])
+    Brand.BackgroundTransparency = 1
+    Brand.Size = UDim2.new(1, -36, 0, 36)
+    Brand.Position = UDim2.new(0, 18, 0, 14)
+    Brand.Text = "ARIES"
+    Brand.TextSize = 18
+    Brand.TextXAlignment = Enum.TextXAlignment.Left
+    Brand.TextColor3 = Color3.fromRGB(243, 243, 247)
+    Brand.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
 	-- Attributes
 	GUI["8"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
 	GUI["8"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
@@ -461,8 +472,8 @@ function Library.new()
 	GUI["1e"] = Instance.new("Frame", GUI["2"]);
 	GUI["1e"]["BorderSizePixel"] = 0;
 	GUI["1e"]["BackgroundColor3"] = Color3.fromRGB(27, 27, 34);
-	GUI["1e"]["Size"] = UDim2.new(1, -158, 0, 62);
-	GUI["1e"]["Position"] = UDim2.new(0, 158, 0, 0);
+	GUI["1e"]["Size"] = UDim2.new(1, -COL_L, 0, 62);
+	GUI["1e"]["Position"] = UDim2.new(0, COL_L, 0, 0);
 	GUI["1e"]["Name"] = [[top_bar_content]];
 	GUI["1e"]["BackgroundTransparency"] = 1;
 	-- Attributes
@@ -474,7 +485,7 @@ function Library.new()
 	GUI["1f"]["BorderSizePixel"] = 0;
 	GUI["1f"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
 	GUI["1f"]["Size"] = UDim2.new(0, 207, 0, 34);
-	GUI["1f"]["Position"] = UDim2.new(0, 8, 0, 23);
+	GUI["1f"]["Position"] = UDim2.new(0, 0, 0, 23);
 	GUI["1f"]["Name"] = [[search]];
 	GUI["1f"]["BackgroundTransparency"] = 0.1;
 	-- Attributes
@@ -555,7 +566,7 @@ function Library.new()
 	GUI["26"]["BorderSizePixel"] = 0;
 	GUI["26"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
 	GUI["26"]["Size"] = UDim2.new(0, 95, 0, 34);
-	GUI["26"]["Position"] = UDim2.new(0, 453, 0, 23);
+	GUI["26"]["Position"] = UDim2.new(1, -109, 0, 23);
 	GUI["26"]["Name"] = [[LegitPvP_Button]];
 	GUI["26"]["BackgroundTransparency"] = 0.1;
 	-- Attributes
@@ -642,7 +653,7 @@ function Library.new()
 	GUI["ef"]["BorderSizePixel"] = 0;
 	GUI["ef"]["BackgroundColor3"] = Color3.fromRGB(10, 11, 16);
 	GUI["ef"]["Size"] = UDim2.new(0, 236, 0, 490);
-	GUI["ef"]["Position"] = UDim2.new(0, 737, 0, 3);
+	GUI["ef"]["Position"] = UDim2.new(0, 760, 0, 3);
 	GUI["ef"]["Name"] = [[name_config_window]];
 	-- Attributes
 	GUI["ef"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
@@ -1788,8 +1799,8 @@ function Library.new()
 	GUI["2b"] = Instance.new("Frame", GUI["2"]);
 	GUI["2b"]["BorderSizePixel"] = 0;
 	GUI["2b"]["BackgroundColor3"] = Color3.fromRGB(27, 27, 34);
-	GUI["2b"]["Size"] = UDim2.new(1, -158, 0, 22);
-	GUI["2b"]["Position"] = UDim2.new(0, 158, 0, 62);
+	GUI["2b"]["Size"] = UDim2.new(1, -COL_L, 0, 22);
+	GUI["2b"]["Position"] = UDim2.new(0, COL_L, 0, 62);
 	GUI["2b"]["Name"] = [[breadcrumb]];
 	GUI["2b"]["BackgroundTransparency"] = 1;
 	-- Attributes
@@ -1813,6 +1824,7 @@ function Library.new()
 	GUI["2c"]["Size"] = UDim2.new(0, 15, 0, 15);
 	GUI["2c"]["BackgroundTransparency"] = 1;
 	GUI["2c"]["Name"] = [[IMG_BreadcrumbIcon]];
+    GUI["2c"].Visible = false;
 	GUI["2c"]["Position"] = UDim2.new(0, 8, 0, 3);
 	-- Attributes
 	GUI["2c"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
@@ -1885,9 +1897,9 @@ function Library.new()
 	local BreadcrumbArrow = GUI["2e"]
 	local BreadcrumbElement = GUI["31"]
 
-	local ICON_X = 8
-	local ICON_SIZE = 15
-	local SECTION_GAP = 2  -- gap after icon before section text
+	local ICON_X = 0
+	local ICON_SIZE = 0
+	local SECTION_GAP = 0  -- gap after icon before section text
 	local ARROW_GAP = 2   -- gap after section text before arrow
 	local ARROW_WIDTH = 20
 	local ELEMENT_GAP = 4  -- gap after arrow before element text
@@ -1955,7 +1967,9 @@ function Library.new()
 
 	local UIS = game:GetService("UserInputService")
 
-	local Main_GUI = GUI["1"]
+	GUI["32"].Visible = false
+    GUI["33"].Visible = false
+    local Main_GUI = GUI["1"]
 	local Scale = GUI["4"]
 
 	local Tween_Time = 0.65
@@ -2009,6 +2023,10 @@ function Library.new()
 		end
 
 		Frame.InputBegan:Connect(function(input)
+            local s = GUI._targetScale or 1
+            local p = (input.UserInputType == Enum.UserInputType.Touch) and Vector2.new(input.Position.X, input.Position.Y) or UserInputService:GetMouseLocation()
+            local rel = p - Frame.AbsolutePosition
+            if rel.Y > 62 * s and rel.X > 176 * s then return end
 			if input.UserInputType == Enum.UserInputType.MouseButton1
 				or input.UserInputType == Enum.UserInputType.Touch then
 				BeginDrag(input)
@@ -2090,8 +2108,8 @@ function Library.new()
 		local searchScrollLeft = Instance.new("ScrollingFrame", GUI["2"])
 		searchScrollLeft.BorderSizePixel = 0
 		searchScrollLeft.BackgroundTransparency = 1
-		searchScrollLeft.Size = UDim2.new(0, 264, 0, 322)
-		searchScrollLeft.Position = UDim2.new(0, 166, 0, 118)
+		searchScrollLeft.Size = UDim2.new(0, 264, 0, COL_H)
+		searchScrollLeft.Position = UDim2.new(0, COL_L, 0, COL_Y)
 		searchScrollLeft.ScrollBarThickness = 2
 		searchScrollLeft.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
 		-- searchScrollLeft.ScrollBarBackgroundTransparency = 1
@@ -2107,8 +2125,8 @@ function Library.new()
 		local searchScrollRight = Instance.new("ScrollingFrame", GUI["2"])
 		searchScrollRight.BorderSizePixel = 0
 		searchScrollRight.BackgroundTransparency = 1
-		searchScrollRight.Size = UDim2.new(0, 264, 0, 322)
-		searchScrollRight.Position = UDim2.new(0, 444, 0, 118)
+		searchScrollRight.Size = UDim2.new(0, 264, 0, COL_H)
+		searchScrollRight.Position = UDim2.new(0, COL_R, 0, COL_Y)
 		searchScrollRight.ScrollBarThickness = 2
 		searchScrollRight.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
 		-- searchScrollRight.ScrollBarBackgroundTransparency = 1
@@ -2172,7 +2190,7 @@ function Library.new()
 
 						local sec = entry.section
 						entry.container.Visible = (tab == GUI.CurrentTabs[sec])
-						entry.container.Position = UDim2.new(0, sec == 'right' and 444 or 166, 0, 118)
+						entry.container.Position = UDim2.new(0, sec == 'right' and COL_R or COL_L, 0, COL_Y)
 					end
 				end
 			else
@@ -2824,7 +2842,7 @@ function Library:Create_Tab(options)
 	Tab.ContentContainer.BackgroundColor3 = Color3.fromRGB(14, 15, 20)
 	Tab.ContentContainer.AutomaticSize = Enum.AutomaticSize.Y
 	Tab.ContentContainer.Size = UDim2.new(0, 264, 0, 0)
-	Tab.ContentContainer.Position = UDim2.new(0, Tab.Section == 'right' and 444 or 166, 0, 118)
+	Tab.ContentContainer.Position = UDim2.new(0, Tab.Section == 'right' and COL_R or COL_L, 0, COL_Y)
 	Tab.ContentContainer.Name = options.name .. "_content"
 	Tab.ContentContainer:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0)
 	Tab.ContentContainer.Visible = (GUI.CurrentTabs[Tab.Section] == Tab)
@@ -3262,7 +3280,8 @@ function Library:Create_Tab(options)
 		Toggle["71"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
 		Toggle["71"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
 		Toggle["71"]["BackgroundTransparency"] = 1;
-		Toggle["71"]["Size"] = UDim2.new(0, 200, 0, 38);
+		Toggle["71"]["Size"] = UDim2.new(1, -104, 0, 38);
+        Toggle["71"]["TextTruncate"] = Enum.TextTruncate.AtEnd;
 		Toggle["71"]["Text"] = options.name
 		Toggle["71"]["Name"] = [[Label]];
 		Toggle["71"]["Position"] = UDim2.new(0, 14, 0, 0);
@@ -3636,7 +3655,8 @@ function Library:Create_Tab(options)
 		Slider["7c"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
 		Slider["7c"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
 		Slider["7c"]["BackgroundTransparency"] = 1;
-		Slider["7c"]["Size"] = UDim2.new(0, 200, 0, 38);
+		Slider["7c"]["Size"] = UDim2.new(1, -130, 0, 38);
+        Slider["7c"]["TextTruncate"] = Enum.TextTruncate.AtEnd;
 		Slider["7c"]["Text"] = options.name
 		Slider["7c"]["Name"] = [[Label]];
 		Slider["7c"]["Position"] = UDim2.new(0, 14, 0, 0);
@@ -3653,10 +3673,10 @@ function Library:Create_Tab(options)
 		Slider["7d"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
 		Slider["7d"]["BackgroundTransparency"] = 1;
 		Slider["7d"]["AnchorPoint"] = Vector2.new(1, 0.5);
-		Slider["7d"]["Size"] = UDim2.new(0, 49, 0, 38);
+		Slider["7d"]["Size"] = UDim2.new(0, 36, 0, 38);
 		Slider["7d"]["Text"] = tostring((options.default or 100) .. '%');
 		Slider["7d"]["Name"] = [[Value]];
-		Slider["7d"]["Position"] = UDim2.new(1, -95, 0.5, 0);
+		Slider["7d"]["Position"] = UDim2.new(1, -80, 0.5, 0);
 		-- Attributes
 		Slider["7d"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
 		Slider["7d"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
@@ -3667,7 +3687,7 @@ function Library:Create_Tab(options)
 		Slider["7e"]["BorderSizePixel"] = 0;
 		Slider["7e"]["BackgroundColor3"] = Color3.fromRGB(53, 53, 63);
 		Slider["7e"]["AnchorPoint"] = Vector2.new(1, 0.5);
-		Slider["7e"]["Size"] = UDim2.new(0, 75, 0, 4);
+		Slider["7e"]["Size"] = UDim2.new(0, 60, 0, 4);
 		Slider["7e"]["Position"] = UDim2.new(1, -12, 0.5, 0);
 		Slider["7e"]["Name"] = [[Slider]];
 		-- Attributes
@@ -3725,10 +3745,10 @@ function Library:Create_Tab(options)
 		Slider["85"]["AutoButtonColor"] = false;
 		Slider["85"]["ZIndex"] = 3;
 		Slider["85"]["BackgroundTransparency"] = 1;
-		Slider["85"]["Size"] = UDim2.new(0, 91, 0, 26);
+		Slider["85"]["Size"] = UDim2.new(0, 76, 0, 26);
 		Slider["85"]["Text"] = [[]];
 		Slider["85"]["Name"] = [[Hit]];
-		Slider["85"]["Position"] = UDim2.new(1, -95, 0.5, -13);
+		Slider["85"]["Position"] = UDim2.new(1, -82, 0.5, -13);
 		-- Attributes
 		Slider["85"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
 		Slider["85"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
@@ -3856,7 +3876,8 @@ function Library:Create_Tab(options)
 		Dropdown["d71"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
 		Dropdown["d71"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
 		Dropdown["d71"]["BackgroundTransparency"] = 1;
-		Dropdown["d71"]["Size"] = UDim2.new(0, 120, 0, 38);
+		Dropdown["d71"]["Size"] = UDim2.new(1, -110, 0, 38);
+        Dropdown["d71"]["TextTruncate"] = Enum.TextTruncate.AtEnd;
 		Dropdown["d71"]["Text"] = options.name;
 		Dropdown["d71"]["Name"] = [[Label]];
 		Dropdown["d71"]["Position"] = UDim2.new(0, 14, 0, 0);
@@ -3868,7 +3889,7 @@ function Library:Create_Tab(options)
 		Dropdown["d72"]["BorderSizePixel"] = 0;
 		Dropdown["d72"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
 		Dropdown["d72"]["AnchorPoint"] = Vector2.new(1, 0.5);
-		Dropdown["d72"]["Size"] = UDim2.new(0, 80, 0, 22);
+		Dropdown["d72"]["Size"] = UDim2.new(0, 84, 0, 22);
 		Dropdown["d72"]["Position"] = UDim2.new(1, -12, 0.5, 0);
 		Dropdown["d72"]["Name"] = [[DropdownButton]];
 		Dropdown["d72"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
@@ -3927,7 +3948,7 @@ function Library:Create_Tab(options)
 		Dropdown["d75"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
 
 		Dropdown["d73"]:GetPropertyChangedSignal("TextBounds"):Connect(function()
-			local width = math.clamp(math.ceil(Dropdown["d73"].TextBounds.X) + 34, 58, 150)
+			local width = 84
 
 			TweenService:Create(Dropdown["d72"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, width, 0, 22)}):Play()
 		end)
@@ -4675,12 +4696,19 @@ function Library:Create_Tab(options)
 		-- Get or create a column wrapper for vertical stacking of sections
 		local wrapperKey = "_wrapper_" .. sectionSide
 		if not Tab[wrapperKey] then
-			Tab[wrapperKey] = Instance.new("Frame", GUI["2"])
+			Tab[wrapperKey] = Instance.new("ScrollingFrame", GUI["2"])
 			Tab[wrapperKey].BorderSizePixel = 0
 			Tab[wrapperKey].BackgroundTransparency = 1
 			Tab[wrapperKey].AutomaticSize = Enum.AutomaticSize.Y
+            Tab[wrapperKey].AutomaticCanvasSize = Enum.AutomaticSize.Y
+            Tab[wrapperKey].CanvasSize = UDim2.new()
+            Tab[wrapperKey].ScrollBarThickness = 2
+            Tab[wrapperKey].ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
+            Tab[wrapperKey].ScrollingDirection = Enum.ScrollingDirection.Y
+            Tab[wrapperKey].ElasticBehavior = Enum.ElasticBehavior.Never
+            Instance.new("UISizeConstraint", Tab[wrapperKey]).MaxSize = Vector2.new(264, COL_H)
 			Tab[wrapperKey].Size = UDim2.new(0, 264, 0, 0)
-			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and 444 or 166, 0, 118)
+			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and COL_R or COL_L, 0, COL_Y)
 			Tab[wrapperKey].Name = (Tab["12"].Name or "Tab") .. "_" .. sectionSide .. "_wrapper"
 
 			local wrapperLayout = Instance.new("UIListLayout", Tab[wrapperKey])
