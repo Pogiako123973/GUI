@@ -394,7 +394,7 @@ function Library.new()
 	Brand.BackgroundTransparency = 1
 	Brand.Size = UDim2.new(1, -36, 0, 36)
 	Brand.Position = UDim2.new(0, 18, 0, 14)
-	Brand.Text = "ARIES"
+	Brand.Text = "VANANA"
 	Brand.TextSize = 18
 	Brand.TextXAlignment = Enum.TextXAlignment.Left
 	Brand.TextColor3 = Color3.fromRGB(243, 243, 247)
@@ -4792,43 +4792,61 @@ end
 
 function Library:Notify(title, text, dur)
 	dur = dur or 4
+	text = tostring(text or "")
+	local TS = game:GetService("TweenService")
 
-	local UI_Notification = {}
+	local gui = Library._NotifyGui
+	if not gui or not gui.Parent then
+		gui = Instance.new("ScreenGui")
+		gui.Name = "Zenthra Notification"
+		gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		gui.ResetOnSpawn = false
+		gui.DisplayOrder = 10
+		gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-	UI_Notification["1"] = Instance.new("ScreenGui")
-	UI_Notification["1"].Name = "Zenthra Notification"
-	UI_Notification["1"].ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	UI_Notification["1"].Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+		local holder = Instance.new("Frame", gui)
+		holder.Name = "Notifications"
+		holder.Size = UDim2.new(0, 240, 0, 400)
+		holder.Position = UDim2.new(1, -16, 1, -16)
+		holder.AnchorPoint = Vector2.new(1, 1)
+		holder.BackgroundTransparency = 1
+		holder.ZIndex = 10
 
-	UI_Notification["2"] = Instance.new("Frame", UI_Notification["1"])
-	UI_Notification["2"].Name = "Notifications"
-	UI_Notification["2"].Size = UDim2.new(0, 230, 0, 400)
-	UI_Notification["2"].Position = UDim2.new(1, -16, 1, -16)
-	UI_Notification["2"].AnchorPoint = Vector2.new(1, 1)
-	UI_Notification["2"].BackgroundTransparency = 1
-	UI_Notification["2"].ZIndex = 10
+		local layout = Instance.new("UIListLayout", holder)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+		layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		layout.Padding = UDim.new(0, 8)
 
-	local Layout = Instance.new("UIListLayout", UI_Notification["2"])
-	Layout.SortOrder = Enum.SortOrder.LayoutOrder
-	Layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	Layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-	Layout.Padding = UDim.new(0, 8)
+		Library._NotifyGui = gui
+	end
 
-	-- Template (your original UI_Notification["4"])
-	UI_Notification["4"] = Instance.new("Frame")
-	UI_Notification["4"].Size = UDim2.fromOffset(230, 52)
-	UI_Notification["4"].BackgroundTransparency = 1
-	UI_Notification["4"].ZIndex = 10
+	local holder = gui:FindFirstChild("Notifications")
 
-	local Card = Instance.new("Frame", UI_Notification["4"])
+	-- ON / OFF get a colour so the state is readable at a glance
+	local accent = Color3.fromRGB(236, 236, 236)
+	local upper = string.upper(text)
+	if upper == "ON" then
+		accent = Color3.fromRGB(100, 220, 100)
+	elseif upper == "OFF" then
+		accent = Color3.fromRGB(220, 100, 100)
+	end
+
+	local Notification = Instance.new("Frame")
+	Notification.Size = UDim2.fromOffset(240, 62)
+	Notification.BackgroundTransparency = 1
+	Notification.ZIndex = 10
+	Notification.Parent = holder
+
+	local Card = Instance.new("Frame", Notification)
 	Card.Size = UDim2.new(1, 0, 1, 0)
 	Card.BackgroundColor3 = Color3.fromRGB(35, 35, 38)
 	Card.ZIndex = 10
-	Card.Position = UDim2.fromOffset(260, 0) -- slide-in start
+	Card.Position = UDim2.fromOffset(270, 0)
 	Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 10)
 
 	local Icon_Frame = Instance.new("Frame", Card)
-	Icon_Frame.Position = UDim2.fromOffset(12, 14)
+	Icon_Frame.Position = UDim2.fromOffset(12, 19)
 	Icon_Frame.Size = UDim2.fromOffset(24, 24)
 	Icon_Frame.BackgroundColor3 = Color3.fromRGB(47, 47, 50)
 	Icon_Frame.ZIndex = 11
@@ -4845,18 +4863,31 @@ function Library:Notify(title, text, dur)
 
 	local Title_Label = Instance.new("TextLabel", Card)
 	Title_Label.BackgroundTransparency = 1
-	Title_Label.Position = UDim2.fromOffset(46, 12)
+	Title_Label.Position = UDim2.fromOffset(46, 9)
 	Title_Label.Size = UDim2.new(1, -58, 0, 14)
 	Title_Label.Font = Enum.Font.GothamBold
-	Title_Label.Text = title
+	Title_Label.Text = tostring(title or "")
 	Title_Label.TextSize = 12
 	Title_Label.TextColor3 = Color3.fromRGB(236, 236, 236)
 	Title_Label.TextXAlignment = Enum.TextXAlignment.Left
+	Title_Label.TextTruncate = Enum.TextTruncate.AtEnd
 	Title_Label.ZIndex = 11
+
+	local Text_Label = Instance.new("TextLabel", Card)
+	Text_Label.BackgroundTransparency = 1
+	Text_Label.Position = UDim2.fromOffset(46, 25)
+	Text_Label.Size = UDim2.new(1, -58, 0, 14)
+	Text_Label.Font = Enum.Font.GothamSemibold
+	Text_Label.Text = text
+	Text_Label.TextSize = 12
+	Text_Label.TextColor3 = accent
+	Text_Label.TextXAlignment = Enum.TextXAlignment.Left
+	Text_Label.TextTruncate = Enum.TextTruncate.AtEnd
+	Text_Label.ZIndex = 11
 
 	local Track = Instance.new("Frame", Card)
 	Track.Name = "track"
-	Track.Position = UDim2.fromOffset(46, 34)
+	Track.Position = UDim2.fromOffset(46, 46)
 	Track.Size = UDim2.new(1, -60, 0, 3)
 	Track.BackgroundColor3 = Color3.fromRGB(56, 56, 59)
 	Track.BorderSizePixel = 0
@@ -4866,54 +4897,22 @@ function Library:Notify(title, text, dur)
 	local Fill = Instance.new("Frame", Track)
 	Fill.Name = "fill"
 	Fill.Size = UDim2.fromScale(1, 1)
-	Fill.BackgroundColor3 = Color3.fromRGB(236, 236, 236)
+	Fill.BackgroundColor3 = accent
 	Fill.BorderSizePixel = 0
 	Fill.ZIndex = 12
-
 	Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 2)
 
-	-- Clone template
-	local Notification = UI_Notification["4"]:Clone()
-	Notification.Parent = UI_Notification["2"]
-	Notification.Visible = true
+	TS:Create(Fill, TweenInfo.new(dur, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)}):Play()
 
-	local Card_Clone = Notification:FindFirstChildOfClass("Frame")
-	local Track_Clone = Card_Clone:FindFirstChild("track")
-	local Fill_Clone = Track_Clone and Track_Clone:FindFirstChild("fill")
+	TS:Create(Card, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(0, 0)}):Play()
 
-	-- Animate bar drain
-	if Fill_Clone then
-		game:GetService("TweenService"):Create(
-			Fill_Clone,
-			TweenInfo.new(dur, Enum.EasingStyle.Linear),
-			{ Size = UDim2.new(0, 0, 1, 0) }
-		):Play()
-	end
-
-	-- Slide-in animation
-	game:GetService("TweenService"):Create(
-		Card_Clone,
-		TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{ Position = UDim2.fromOffset(0, 0) }
-	):Play()
-
-	-- Slide-out + collapse
 	task.delay(dur, function()
-		local out = game:GetService("TweenService"):Create(
-			Card_Clone,
-			TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-			{ Position = UDim2.fromOffset(260, 0) }
-		)
+		local out = TS:Create(Card, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.fromOffset(270, 0)})
 		out:Play()
 
 		out.Completed:Once(function()
-			local collapse = game:GetService("TweenService"):Create(
-				Notification,
-				TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ Size = UDim2.fromOffset(230, 0) }
-			)
+			local collapse = TS:Create(Notification, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(240, 0)})
 			collapse:Play()
-
 			collapse.Completed:Once(function()
 				Notification:Destroy()
 			end)
