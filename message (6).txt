@@ -329,20 +329,20 @@ function Library.new()
 	GUI["2"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
 	-- StarterGui.Byte_UI.Main_Menu_Window.UICorner
 	GUI["3"] = Instance.new("UICorner", GUI["2"]);
-	GUI["3"]["CornerRadius"] = UDim.new(0, 22);
+	GUI["3"]["CornerRadius"] = UDim.new(0, 14);
 
 	-- floating outline around the window + left panel (panel sticks out 27px on the left)
 	GUI["outline"] = Instance.new("Frame", GUI["2"])
 	GUI["outline"].Name = "WindowOutline"
-	GUI["outline"].BackgroundColor3 = Color3.fromRGB(10, 11, 16)
-	GUI["outline"].BackgroundTransparency = 0
-	GUI["outline"].ZIndex = 0
-	GUI["outline"]:SetAttribute("fadeOriginal_BackgroundTransparency", 0)
+	
+	GUI["outline"].BackgroundTransparency = 1
+	
+	
 	GUI["outline"].BorderSizePixel = 0
 	GUI["outline"].Active = false
-    GUI["outline"].Position = UDim2.new(0, -35, 0, 0)
-    GUI["outline"].Size = UDim2.new(1, 35, 1, 0)
-	Instance.new("UICorner", GUI["outline"]).CornerRadius = UDim.new(0, 22)
+    GUI["outline"].Position = UDim2.new(0, 0, 0, 0)
+    GUI["outline"].Size = UDim2.new(1, 0, 1, 0)
+	Instance.new("UICorner", GUI["outline"]).CornerRadius = UDim.new(0, 20)
 	local outlineStroke = Instance.new("UIStroke", GUI["outline"])
 	outlineStroke.Color = Color3.fromRGB(235, 60, 60)
 	outlineStroke.Thickness = 1.4
