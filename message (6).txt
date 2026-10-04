@@ -342,7 +342,7 @@ function Library.new()
 	Instance.new("UICorner", GUI["outline"]).CornerRadius = UDim.new(0, 20)
 	local outlineStroke = Instance.new("UIStroke", GUI["outline"])
 	outlineStroke.Color = Color3.fromRGB(235, 60, 60)
-	outlineStroke.Thickness = 1.5
+	outlineStroke.Thickness = 1.8
 	outlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     outlineStroke.BorderStrokePosition = Enum.BorderStrokePosition.Inner
 
