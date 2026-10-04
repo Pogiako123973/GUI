@@ -391,14 +391,14 @@ function Library.new()
 	GUI["8"]["Position"] = UDim2.new(0, 18, 0, 14);
 	GUI["8"].Visible = false
 	local Brand = Instance.new("ImageLabel", GUI["5"])
-	Brand.Name = "VananaBrand"
+	Brand.Name = "Vanana"
 	Brand.BackgroundTransparency = 1
 	Brand.BorderSizePixel = 0
 	Brand.ScaleType = Enum.ScaleType.Fit
 	Brand.Image = "rbxassetid://125393398881368"
-	Brand.AnchorPoint = Vector2.new(0.5, 0.5)
-	Brand.Position = UDim2.new(0.5, 0, 0.5, 0)
-	Brand.Size = UDim2.new(0.8, 0, 0.8, 0)
+	Brand.AnchorPoint = Vector2.new(0.5, 0)
+	Brand.Position = UDim2.new(0.5, 0, 0, 12)
+	Brand.Size = UDim2.new(0.85, 0, 0, 45)
 	-- Attributes
 	GUI["8"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
 	GUI["8"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
