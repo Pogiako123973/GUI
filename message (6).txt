@@ -331,6 +331,20 @@ function Library.new()
 	GUI["3"] = Instance.new("UICorner", GUI["2"]);
 	GUI["3"]["CornerRadius"] = UDim.new(0, 14);
 
+	-- floating outline around the window + left panel (panel sticks out 27px on the left)
+	GUI["outline"] = Instance.new("Frame", GUI["2"])
+	GUI["outline"].Name = "WindowOutline"
+	GUI["outline"].BackgroundTransparency = 1
+	GUI["outline"].BorderSizePixel = 0
+	GUI["outline"].Active = false
+	GUI["outline"].Position = UDim2.new(0, -36, 0, -8)
+	GUI["outline"].Size = UDim2.new(1, 44, 1, 16)
+	Instance.new("UICorner", GUI["outline"]).CornerRadius = UDim.new(0, 20)
+	local outlineStroke = Instance.new("UIStroke", GUI["outline"])
+	outlineStroke.Color = Color3.fromRGB(235, 60, 60)
+	outlineStroke.Thickness = 1.5
+	outlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
 	-- GUI["4"] = Instance.new("UIScale", GUI["2"]);
 	-- GUI["4"].Scale = 1
 
@@ -369,6 +383,11 @@ function Library.new()
 	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UICorner
 	GUI["6"] = Instance.new("UICorner", GUI["5"]);
 	GUI["6"]["CornerRadius"] = UDim.new(0, 14);
+	local panelStroke = Instance.new("UIStroke", GUI["5"])
+	panelStroke.Color = Color3.fromRGB(235, 60, 60)
+	panelStroke.Thickness = 1.2
+	panelStroke.Transparency = 0.2
+	panelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 
 	-- StarterGui.Byte_UI.Main_Menu_Window.left_panel.UIShadow
@@ -556,7 +575,7 @@ function Library.new()
 	-- StarterGui.Byte_UI.Main_Menu_Window.top_bar_content.search.UIStroke
 	GUI["25"] = Instance.new("UIStroke", GUI["1f"]);
 	GUI["25"]["Transparency"] = 1;
-	GUI["25"]["Color"] = Color3.fromRGB(125, 109, 247);
+	GUI["25"]["Color"] = Color3.fromRGB(235, 60, 60);
 	-- Attributes
 	GUI["25"]:SetAttribute([[fadeOriginal_Transparency]], 1);
 
@@ -620,6 +639,7 @@ function Library.new()
 
 	GUI.Indicator = Instance.new("ImageLabel", GUI["5"])
 	GUI.Indicator.BorderSizePixel = 0
+	GUI.Indicator.ImageColor3 = Color3.fromRGB(235, 60, 60)
 	GUI.Indicator.Image = "rbxassetid://90362801488029"
 	GUI.Indicator.Size = UDim2.new(0, 3, 0, 15)
 	GUI.Indicator.BackgroundTransparency = 1
@@ -901,7 +921,7 @@ function Library.new()
 	-- NewBindField.UIStroke (same purple border as search input when focused)
 	GUI["kpw_nbf_s"] = Instance.new("UIStroke", GUI["kpw_nbf"]);
 	GUI["kpw_nbf_s"]["Transparency"] = 1;
-	GUI["kpw_nbf_s"]["Color"] = Color3.fromRGB(125, 109, 247);
+	GUI["kpw_nbf_s"]["Color"] = Color3.fromRGB(235, 60, 60);
 
 	-- NewBindField.IMG_BindIcon
 	GUI["kpw_nbf_i"] = Instance.new("ImageLabel", GUI["kpw_nbf"]);
@@ -1006,7 +1026,7 @@ function Library.new()
 	-- StarterGui.Byte_UI.keybind_picker_window.ModeSelection
 	GUI["kpw_ms"] = Instance.new("Frame", GUI["kpw"]);
 	GUI["kpw_ms"]["BorderSizePixel"] = 0;
-	GUI["kpw_ms"]["BackgroundColor3"] = Color3.fromRGB(123, 104, 246);
+	GUI["kpw_ms"]["BackgroundColor3"] = Color3.fromRGB(235, 60, 60);
 	GUI["kpw_ms"]["ZIndex"] = 56;
 	GUI["kpw_ms"]["Size"] = UDim2.new(0, 65, 0, 26);
 	GUI["kpw_ms"]["Position"] = UDim2.new(0, 8, 0, 42);
@@ -1021,7 +1041,7 @@ function Library.new()
 	GUI["kpw_tl"]["TextSize"] = 12;
 	GUI["kpw_tl"]["TextXAlignment"] = Enum.TextXAlignment.Center;
 	GUI["kpw_tl"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
-	GUI["kpw_tl"]["TextColor3"] = Color3.fromRGB(34, 29, 72);
+	GUI["kpw_tl"]["TextColor3"] = Color3.fromRGB(40, 8, 8);
 	GUI["kpw_tl"]["BackgroundTransparency"] = 1;
 	GUI["kpw_tl"]["ZIndex"] = 56;
 	GUI["kpw_tl"]["Size"] = UDim2.new(0, 65, 0, 26);
@@ -1081,7 +1101,7 @@ function Library.new()
 		GUI.WaitingForKey = true
 
 		GUI["kpw_nbf_p"].Text = [[Press a key...]]
-		GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(125, 109, 247)
+		GUI["kpw_nbf_p"].TextColor3 = Color3.fromRGB(235, 60, 60)
 		TweenService:Create(GUI["kpw_nbf_s"], TweenInfo.new(0.2), {Transparency = 0}):Play()
 	end)
 
@@ -1097,7 +1117,7 @@ function Library.new()
 			Library.save_flags()
 		end
 		TweenService:Create(GUI["kpw_ms"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 8, 0, 42)}):Play()
-		GUI["kpw_tl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+		GUI["kpw_tl"].TextColor3 = Color3.fromRGB(40, 8, 8)
 		GUI["kpw_hl"].TextColor3 = Color3.fromRGB(244, 244, 248)
 	end)
 
@@ -1114,7 +1134,7 @@ function Library.new()
 		end
 		TweenService:Create(GUI["kpw_ms"], TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 77, 0, 42)}):Play()
 		GUI["kpw_tl"].TextColor3 = Color3.fromRGB(244, 244, 248)
-		GUI["kpw_hl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+		GUI["kpw_hl"].TextColor3 = Color3.fromRGB(40, 8, 8)
 	end)
 
 	-- Capture key when waiting
@@ -1203,7 +1223,7 @@ function Library.new()
 
 		if toggle["72_text"] then
 			toggle["72_text"].Text = formatKeyName(key)
-			toggle["72_text"].TextColor3 = Color3.fromRGB(125, 109, 247)
+			toggle["72_text"].TextColor3 = Color3.fromRGB(235, 60, 60)
 		end
 
 		-- Show the purple UIStroke border on the assigned keybind button (matches keybind picker focused state)
@@ -2261,9 +2281,9 @@ function Library.new()
 		local COLOR_EDIT_ACTIVE      = Color3.fromRGB(150, 150, 161)
 		local COLOR_DELETE_IDLE      = Color3.fromRGB(120, 120, 131)
 		local COLOR_DELETE_ACTIVE    = Color3.fromRGB(224, 82, 76)
-		local COLOR_INDICATOR        = Color3.fromRGB(125, 109, 247)
+		local COLOR_INDICATOR        = Color3.fromRGB(235, 60, 60)
 		local COLOR_SORT_IDLE        = Color3.fromRGB(150, 150, 161)
-		local COLOR_SORT_ACTIVE      = Color3.fromRGB(125, 109, 247)
+		local COLOR_SORT_ACTIVE      = Color3.fromRGB(235, 60, 60)
 
 		local presets       = {}
 		local activePreset  = nil
@@ -3066,7 +3086,7 @@ function Library:Create_Tab(options)
 		end)
 
 		Button["b3"].MouseButton1Click:Connect(function()
-			TweenService:Create(Button["b1"], TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(125, 109, 247)}):Play()
+			TweenService:Create(Button["b1"], TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(235, 60, 60)}):Play()
 			task.delay(0.15, function()
 				TweenService:Create(Button["b1"], TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(143, 143, 154)}):Play()
 			end)
@@ -3156,7 +3176,7 @@ function Library:Create_Tab(options)
 
 		KeybindWidget["73_s"] = Instance.new("UIStroke", KeybindWidget["73"])
 		KeybindWidget["73_s"]["Transparency"] = 1
-		KeybindWidget["73_s"]["Color"] = Color3.fromRGB(125, 109, 247)
+		KeybindWidget["73_s"]["Color"] = Color3.fromRGB(235, 60, 60)
 
 		KeybindWidget._callback = options.callback
 
@@ -3191,12 +3211,12 @@ function Library:Create_Tab(options)
 					local mode = KeybindWidget.KeybindMode or "toggle"
 					if mode == "toggle" then
 						GUI["kpw_ms"].Position = UDim2.new(0, 8, 0, 42)
-						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(40, 8, 8)
 						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(244, 244, 248)
 					else
 						GUI["kpw_ms"].Position = UDim2.new(0, 77, 0, 42)
 						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(244, 244, 248)
-						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(40, 8, 8)
 					end
 					TweenService:Create(Keybinds_Picker, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 150, 0, 76)}):Play()
 				else
@@ -3234,7 +3254,7 @@ function Library:Create_Tab(options)
 				KeybindWidget.KeybindMode = saved.mode or "toggle"
 				Library.Keybinds[KeybindWidget] = { key = key, mode = KeybindWidget.KeybindMode, flag = KeybindWidget.flag }
 				KeybindWidget["72_text"].Text = KeybindWidget.KeybindName
-				KeybindWidget["72_text"].TextColor3 = Color3.fromRGB(125, 109, 247)
+				KeybindWidget["72_text"].TextColor3 = Color3.fromRGB(235, 60, 60)
 				KeybindWidget["73_s"].Transparency = 0
 			end
 		end
@@ -3342,7 +3362,7 @@ function Library:Create_Tab(options)
 		--Toggle["73_s"] = Instance.new("UIStroke", Toggle["72"]);
 		Toggle["73_s"] = Instance.new("UIStroke", Toggle["73"]);
 		Toggle["73_s"]["Transparency"] = 1;
-		Toggle["73_s"]["Color"] = Color3.fromRGB(125, 109, 247);
+		Toggle["73_s"]["Color"] = Color3.fromRGB(235, 60, 60);
 
 		-- toggles created with NoKeybind hide the ··· badge and its hit button
 		if options.nokeybind then
@@ -3403,7 +3423,7 @@ function Library:Create_Tab(options)
 		Toggle["79"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
 
 		if Library.Flags[Toggle.flag] then
-			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(125, 109, 247) }):Play()
+			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(235, 60, 60) }):Play()
 			TweenService:Create(Toggle["76"], TweenInfo.new(0.2), { Position = UDim2.new(0, 15, 0, 2), BackgroundColor3 = Color3.fromRGB(255, 255, 255) }):Play()
 		else
 			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(37, 37, 47) }):Play()
@@ -3433,7 +3453,7 @@ function Library:Create_Tab(options)
 			if not bgFrame or not knob then return end
 
 			if Library.Flags[self.flag] then
-				local t1 = TweenService:Create(bgFrame, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(125, 109, 247) })
+				local t1 = TweenService:Create(bgFrame, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(235, 60, 60) })
 				local t2 = TweenService:Create(knob, TweenInfo.new(0.2), { Position = UDim2.new(0, 15, 0, 2), BackgroundColor3 = Color3.fromRGB(255, 255, 255) })
 				t1:Play()
 				t2:Play()
@@ -3514,12 +3534,12 @@ function Library:Create_Tab(options)
 					local mode = Toggle.KeybindMode or "toggle"
 					if mode == "toggle" then
 						GUI["kpw_ms"].Position = UDim2.new(0, 8, 0, 42)
-						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(40, 8, 8)
 						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(244, 244, 248)
 					else
 						GUI["kpw_ms"].Position = UDim2.new(0, 77, 0, 42)
 						GUI["kpw_tl"].TextColor3 = Color3.fromRGB(244, 244, 248)
-						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(34, 29, 72)
+						GUI["kpw_hl"].TextColor3 = Color3.fromRGB(40, 8, 8)
 					end
 
 					TweenService:Create(Keybinds_Picker, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 150, 0, 76)}):Play()
@@ -3570,7 +3590,7 @@ function Library:Create_Tab(options)
 				}
 				if Toggle["72_text"] then
 					Toggle["72_text"].Text = Toggle.KeybindName
-					Toggle["72_text"].TextColor3 = Color3.fromRGB(125, 109, 247)
+					Toggle["72_text"].TextColor3 = Color3.fromRGB(235, 60, 60)
 				end
 				if Toggle["73_s"] then
 					Toggle["73_s"].Transparency = 0
@@ -3703,7 +3723,7 @@ function Library:Create_Tab(options)
 		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_health.Slider.Fill
 		Slider["80"] = Instance.new("Frame", Slider["7e"]);
 		Slider["80"]["BorderSizePixel"] = 0;
-		Slider["80"]["BackgroundColor3"] = Color3.fromRGB(125, 109, 247);
+		Slider["80"]["BackgroundColor3"] = Color3.fromRGB(235, 60, 60);
 		local _defaultPct = ((options.default or 100) - (options.min or 0)) / ((options.max or 100) - (options.min or 0))
 		Slider["80"]["Size"] = UDim2.fromScale(_defaultPct, 1);
 		Slider["80"]["Name"] = [[Fill]];
@@ -4745,6 +4765,12 @@ function Library:Create_Tab(options)
 		-- space under the last row so it doesn't touch the card's rounded bottom
 		local cardPad = Instance.new("UIPadding", Section.ContentContainer)
 		cardPad.PaddingBottom = UDim.new(0, 6)
+
+		local cardStroke = Instance.new("UIStroke", Section.ContentContainer)
+		cardStroke.Color = Color3.fromRGB(235, 60, 60)
+		cardStroke.Thickness = 1
+		cardStroke.Transparency = 0.35
+		cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 		-- labels sit 14px from the left, but right-anchored controls sat 12px from the right.
 		-- 2px of right padding on every row makes both edges 14px.
