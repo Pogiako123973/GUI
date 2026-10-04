@@ -1959,6 +1959,8 @@ function Library.new()
 	GUI["33"]["Text"] = [[Extras]];
 	GUI["33"]["Name"] = [[ExtraTitle]];
 	GUI["33"]["Position"] = UDim2.new(0, 444, 0, 92);
+	GUI["32"].Visible = false
+	GUI["33"].Visible = false
 	-- Attributes
 	GUI["33"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
 	GUI["33"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
@@ -2198,7 +2200,7 @@ function Library.new()
 					for _, entry in (containers) do
 						local hasMatch = false
 						for _, child in (entry.container:GetChildren()) do
-							if child:IsA("GuiObject") then
+							if child:IsA("GuiObject") and child.Name ~= "SectionHeader" then
 								local widgetName = getWidgetName(child)
 								if string.find(string.lower(widgetName), query) then
 									child.Visible = true
@@ -4701,7 +4703,7 @@ function Library:Create_Tab(options)
 			Tab[wrapperKey].BackgroundTransparency = 1
 			Tab[wrapperKey].AutomaticSize = Enum.AutomaticSize.Y
 			Tab[wrapperKey].Size = UDim2.new(0, 264, 0, 0)
-			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and 444 or 166, 0, 118)
+			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and 444 or 166, 0, 96)
 			Tab[wrapperKey].Name = (Tab["12"].Name or "Tab") .. "_" .. sectionSide .. "_wrapper"
 
 			local wrapperLayout = Instance.new("UIListLayout", Tab[wrapperKey])
@@ -4719,20 +4721,7 @@ function Library:Create_Tab(options)
 
 		local wrapper = Tab[wrapperKey]
 
-		-- Create per-section MainTitle if a name is provided
-		if sectionName then
-			Section.MainTitle = Instance.new("TextLabel", wrapper)
-			Section.MainTitle.TextSize = 13
-			Section.MainTitle.TextXAlignment = Enum.TextXAlignment.Left
-			Section.MainTitle.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			Section.MainTitle.TextColor3 = Color3.fromRGB(243, 243, 247)
-			Section.MainTitle.BackgroundTransparency = 1
-			Section.MainTitle.Size = UDim2.new(0, 200, 0, 16)
-			Section.MainTitle.Text = sectionName
-			Section.MainTitle.Name = "MainTitle"
-			Section.MainTitle:SetAttribute("fadeOriginal_TextTransparency", 0)
-			Section.MainTitle:SetAttribute("fadeOriginal_BackgroundTransparency", 1)
-		end
+
 
 		-- Content container (child of wrapper for automatic vertical stacking)
 		Section.ContentContainer = Instance.new("Frame", wrapper)
@@ -4752,6 +4741,24 @@ function Library:Create_Tab(options)
 
 		local sectionLayout = Instance.new("UIListLayout", Section.ContentContainer)
 		sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+		-- Header lives inside the card (LayoutOrder -1 keeps it above every widget row)
+		if sectionName then
+			local Header = Instance.new("TextLabel", Section.ContentContainer)
+			Header.Name = "SectionHeader"
+			Header.LayoutOrder = -1
+			Header.Size = UDim2.new(1, 0, 0, 34)
+			Header.BackgroundTransparency = 1
+			Header.Text = sectionName
+			Header.TextSize = 13
+			Header.TextXAlignment = Enum.TextXAlignment.Left
+			Header.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+			Header.TextColor3 = Color3.fromRGB(243, 243, 247)
+			Header:SetAttribute("fadeOriginal_TextTransparency", 0)
+			Header:SetAttribute("fadeOriginal_BackgroundTransparency", 1)
+			Instance.new("UIPadding", Header).PaddingLeft = UDim.new(0, 14)
+			Section.MainTitle = Header
+		end
 
 		function Section:Create_Toggle(opts)
 			opts = opts or {}
