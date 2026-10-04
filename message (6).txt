@@ -344,6 +344,7 @@ function Library.new()
 	outlineStroke.Color = Color3.fromRGB(235, 60, 60)
 	outlineStroke.Thickness = 1.5
 	outlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    outlineStroke.BorderStrokePosition = Enum.BorderStrokePosition.Inner
 
 	-- GUI["4"] = Instance.new("UIScale", GUI["2"]);
 	-- GUI["4"].Scale = 1
