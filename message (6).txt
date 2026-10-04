@@ -2422,6 +2422,7 @@ function Library.new()
 
 			activePreset = preset
 			GUI.ApplyingPreset = true
+			Library.ApplyingPreset = true
 
 			-- Phase 1: Turn off all toggle flags so nothing from the old preset interacts with the new one
 			for k, v in pairs(Library.Flags) do
@@ -2440,6 +2441,7 @@ function Library.new()
 			end
 
 			GUI.ApplyingPreset = false
+			Library.ApplyingPreset = false
 
 			renderStates()
 			scheduleSave()
@@ -3339,6 +3341,12 @@ function Library:Create_Tab(options)
 		Toggle["73_s"] = Instance.new("UIStroke", Toggle["73"]);
 		Toggle["73_s"]["Transparency"] = 1;
 		Toggle["73_s"]["Color"] = Color3.fromRGB(125, 109, 247);
+
+		-- toggles created with NoKeybind hide the ··· badge and its hit button
+		if options.nokeybind then
+			Toggle["72"].Visible = false
+			Toggle["73"].Visible = false
+		end
 
 
 		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable.Toggle
