@@ -395,7 +395,7 @@ function Library.new()
 	Brand.BackgroundTransparency = 1
 	Brand.BorderSizePixel = 0
 	Brand.ScaleType = Enum.ScaleType.Fit
-	Brand.Image = "rbxassetid://130450158282664"
+	Brand.Image = "rbxassetid://125393398881368"
 	Brand.Size = UDim2.new(0, 156, 0, 39)
 	Brand.Position = UDim2.new(0, 6, 0, 10)
 	-- Attributes
