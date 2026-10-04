@@ -389,6 +389,16 @@ function Library.new()
 	GUI["8"]["BackgroundTransparency"] = 1;
 	GUI["8"]["Name"] = [[IMG_Logo]];
 	GUI["8"]["Position"] = UDim2.new(0, 18, 0, 14);
+	GUI["8"].Visible = false
+	local Brand = Instance.new("TextLabel", GUI["5"])
+	Brand.BackgroundTransparency = 1
+	Brand.Size = UDim2.new(1, -36, 0, 36)
+	Brand.Position = UDim2.new(0, 18, 0, 14)
+	Brand.Text = "ARIES"
+	Brand.TextSize = 18
+	Brand.TextXAlignment = Enum.TextXAlignment.Left
+	Brand.TextColor3 = Color3.fromRGB(243, 243, 247)
+	Brand.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
 	-- Attributes
 	GUI["8"]:SetAttribute([[fadeOriginal_ImageTransparency]], 0);
 	GUI["8"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
