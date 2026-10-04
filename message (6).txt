@@ -18,7 +18,15 @@ if not isfolder("Aries/Presets") then
 end
 
 function Library:save_flags()
-	local flags = HttpService:JSONEncode(Library.Flags)
+	local safe = {}
+	for k, v in pairs(Library.Flags) do
+		if typeof(v) == "Color3" then
+			safe[k] = {__type = "Color3", R = v.R, G = v.G, B = v.B}
+		elseif type(v) == "table" or type(v) == "string" or type(v) == "number" or type(v) == "boolean" then
+			safe[k] = v
+		end
+	end
+	local flags = HttpService:JSONEncode(safe)
 
 	writefile('Aries/' .. game.GameId .. '.lua', flags)
 end
@@ -36,7 +44,17 @@ function Library:load_flags()
 		return
 	end
 
-	Library.Flags = HttpService:JSONDecode(flags)
+	local ok, decoded = pcall(HttpService.JSONDecode, HttpService, flags)
+	if not ok or type(decoded) ~= "table" then
+		Library.save_flags()
+		return
+	end
+	for k, v in pairs(decoded) do
+		if type(v) == "table" and v.__type == "Color3" then
+			decoded[k] = Color3.new(v.R or 0, v.G or 0, v.B or 0)
+		end
+	end
+	Library.Flags = decoded
 end
 
 Library.load_flags()
@@ -1158,7 +1176,7 @@ function Library.new()
 					Library.save_flags()
 					-- Reset Library.ToggleKey to default when Show/Hide keybind is cleared
 					if toggle.flag == "Show_Hide_UI_Keybind" then
-						Library.ToggleKey = Enum.KeyCode.LeftControl
+						Library.ToggleKey = Enum.KeyCode.RightAlt
 					end
 				end
 				if toggle["72_text"] then
@@ -1270,6 +1288,9 @@ function Library.new()
 				-- Show/Hide UI) so modifier keys (Alt, Ctrl) still work.
 				-- For normal keybinds, respect gpe to avoid triggering
 				-- while typing in chat/textboxes.
+				if toggle.flag == "Show_Hide_UI_Keybind" then
+					continue
+				end
 				if gpe and not toggle._skipGPE then
 					continue
 				end
@@ -2324,13 +2345,15 @@ function Library.new()
 			if not flags then return end
 			-- Clear existing flags except __lastPreset so each preset is independent
 			for k in pairs(Library.Flags) do
-				if k ~= "__lastPreset" then
+				if k ~= "__lastPreset" and k ~= "Show_Hide_UI_Keybind" then
 					Library.Flags[k] = nil
 				end
 			end
 			-- Apply the new preset's flags
 			for k, v in flags do
-				Library.Flags[k] = v
+				if k ~= "Show_Hide_UI_Keybind" then
+					Library.Flags[k] = v
+				end
 			end
 		end
 
@@ -3260,6 +3283,9 @@ function Library:Create_Tab(options)
 				KeybindWidget["72_text"].Text = KeybindWidget.KeybindName
 				KeybindWidget["72_text"].TextColor3 = Color3.fromRGB(235, 60, 60)
 				KeybindWidget["73_s"].Transparency = 0
+				if KeybindWidget.flag == "Show_Hide_UI_Keybind" then
+					Library.ToggleKey = key
+				end
 			end
 		end
 
