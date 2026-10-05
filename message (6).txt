@@ -340,7 +340,7 @@ function Library.new()
 	GUI["2"]["BorderSizePixel"] = 0;
 	GUI["2"]["BackgroundColor3"] = Color3.fromRGB(10, 11, 16);
 	GUI["2"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
-	GUI["2"]["Size"] = UDim2.new(0, 718, 0, 440);
+	GUI["2"]["Size"] = UDim2.new(0, 732, 0, 440);
 	GUI["2"]["Position"] = UDim2.new(0.5, 0, 0.5, 0);
 	GUI["2"]["Name"] = [[Main_Menu_Window]];
 	-- Attributes
@@ -694,7 +694,7 @@ function Library.new()
 	GUI["ef"]["BorderSizePixel"] = 0;
 	GUI["ef"]["BackgroundColor3"] = Color3.fromRGB(10, 11, 16);
 	GUI["ef"]["Size"] = UDim2.new(0, 236, 0, 490);
-	GUI["ef"]["Position"] = UDim2.new(0, 737, 0, 3);
+	GUI["ef"]["Position"] = UDim2.new(0, 751, 0, 3);
 	GUI["ef"]["Name"] = [[name_config_window]];
 	-- Attributes
 	GUI["ef"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
