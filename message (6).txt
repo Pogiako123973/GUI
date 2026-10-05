@@ -2216,6 +2216,10 @@ function Library.new()
 				for _, tab in (GUI.Tabs) do
 					local containers = tab.AllContainers or {{container = tab.ContentContainer, section = tab.Section or 'left'}}
 					for _, entry in (containers) do
+						if entry.skipSearch then
+							entry.container.Visible = (tab == GUI.CurrentTabs[entry.section])
+							continue
+						end
 						-- Restore parent to main window if it was reparented to a scroll frame
 						if entry.container.Parent ~= GUI["2"] then
 							entry.container.Parent = GUI["2"]
@@ -2229,7 +2233,7 @@ function Library.new()
 
 						local sec = entry.section
 						entry.container.Visible = (tab == GUI.CurrentTabs[sec])
-						entry.container.Position = UDim2.new(0, sec == 'right' and 444 or 166, 0, 96)
+						entry.container.Position = UDim2.new(0, sec == 'right' and 444 or 166, 0, 96 + (tab.TopOffset or 0))
 					end
 				end
 			else
@@ -2243,6 +2247,10 @@ function Library.new()
 				for _, tab in (GUI.Tabs) do
 					local containers = tab.AllContainers or {{container = tab.ContentContainer, section = tab.Section or 'left'}}
 					for _, entry in (containers) do
+						if entry.skipSearch then
+							entry.container.Visible = false
+							continue
+						end
 						local hasMatch = false
 						for _, child in (entry.container:GetChildren()) do
 							if child:IsA("GuiObject") and child.Name ~= "SectionHeader" then
@@ -4854,26 +4862,31 @@ function Library:Create_Tab(options)
 		}
 		if not Library.Themes[ThemePicker.Selected] then ThemePicker.Selected = "Midnight" end
 
-		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+        local ROW_H = 96
 
-		local row = Instance.new("Frame", parent)
-		row.Name = options.name .. "_themepicker"
-		row.BackgroundTransparency = 1
-		row.BorderSizePixel = 0
-		row.Size = UDim2.new(1, 0, 0, 100)
-		row.LayoutOrder = 0
-		row:SetAttribute("fadeOriginal_BackgroundTransparency", 1)
+        -- full-width row (spans both columns), parented to the main window
+        local row = Instance.new("Frame", GUI["2"])
+        row.Name = options.name .. "_themepicker"
+        row.BackgroundTransparency = 1
+        row.BorderSizePixel = 0
+        row.Size = UDim2.new(0, 542, 0, ROW_H)
+        row.Position = UDim2.new(0, 166, 0, 96)
+        row.Visible = (GUI.CurrentTabs['left'] == Tab)
+        row:SetAttribute("fadeOriginal_BackgroundTransparency", 1)
 
-		local holder = Instance.new("Frame", row)
-		holder.Name = "Cards"
-		holder.BackgroundTransparency = 1
-		holder.Position = UDim2.new(0, 14, 0, 8)
-		holder.Size = UDim2.new(1, -28, 1, -16)
+        -- other sections on this tab get pushed below the picker
+        Tab.TopOffset = ROW_H + 10
+        table.insert(Tab.AllContainers, {container = row, section = 'left', skipSearch = true})
 
-		local layout = Instance.new("UIListLayout", holder)
-		layout.FillDirection = Enum.FillDirection.Horizontal
-		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Padding = UDim.new(0, 6)
+        local holder = Instance.new("Frame", row)
+        holder.Name = "Cards"
+        holder.BackgroundTransparency = 1
+        holder.Size = UDim2.new(1, 0, 1, 0)
+
+        local layout = Instance.new("UIListLayout", holder)
+        layout.FillDirection = Enum.FillDirection.Horizontal
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, 8)
 
 		local function rect(par, color, pos, size, radius)
 			local f = Instance.new("Frame", par)
@@ -4895,7 +4908,7 @@ function Library:Create_Tab(options)
 			card.LayoutOrder = i
 			card.BorderSizePixel = 0
 			card.BackgroundColor3 = pv.bg
-			card.Size = UDim2.new(1 / 3, -4, 1, 0)
+			card.Size = UDim2.new(1 / 3, -6, 1, 0)
 			card:SetAttribute("NoTheme", true)
 			Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
 
@@ -4905,29 +4918,31 @@ function Library:Create_Tab(options)
 			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 			stroke.Transparency = (themeName == ThemePicker.Selected) and 0 or 1
 
-			rect(card, THEME_ACCENT, UDim2.new(0, 7, 0, 10), UDim2.new(0, 10, 0, 2), 1)
+			rect(card, THEME_ACCENT, UDim2.new(0, 9, 0, 12), UDim2.new(0, 11, 0, 3), 1)
 			for k = 1, 3 do
-				rect(card, pv.line, UDim2.new(0, 7, 0, 10 + k * 6), UDim2.new(0, 8, 0, 2), 1)
+				rect(card, pv.line, UDim2.new(0, 9, 0, 12 + k * 7), UDim2.new(0, 9, 0, 2), 1)
 			end
-			rect(card, pv.line, UDim2.new(0, 24, 0, 10), UDim2.new(1, -32, 0, 3), 2)
+			rect(card, pv.line, UDim2.new(0, 28, 0, 12), UDim2.new(1, -40, 0, 3), 2)
 			for b = 0, 1 do
-				local box = rect(card, pv.panel, UDim2.new(b == 0 and 0 or 0.28, b == 0 and 24 or 28, 0, 20), UDim2.new(0.28, 0, 0, 24), 3)
-				rect(box, pv.line, UDim2.new(0, 4, 0, 4), UDim2.new(0, 10, 0, 2), 1)
-				rect(box, THEME_ACCENT, UDim2.new(0, 4, 0, 11), UDim2.new(0, 9, 0, 7), 2)
+				local box = rect(card, pv.panel,
+					b == 0 and UDim2.new(0, 28, 0, 26) or UDim2.new(0.4, 30, 0, 26),
+					UDim2.new(0.36, 0, 0, 38), 4)
+				rect(box, pv.line, UDim2.new(0, 6, 0, 6), UDim2.new(0, 22, 0, 2), 1)
+				rect(box, THEME_ACCENT, UDim2.new(0, 6, 0, 16), UDim2.new(0, 20, 0, 14), 3)
 			end
 
 			local label = Instance.new("TextLabel", card)
 			label.Name = "Label"
 			label.BackgroundTransparency = 1
-			label.Position = UDim2.new(0, 8, 1, -22)
-			label.Size = UDim2.new(1, -12, 0, 16)
+			label.Position = UDim2.new(0, 10, 1, -24)
+			label.Size = UDim2.new(1, -16, 0, 18)
 			label.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
 			label.Text = themeName
 			label.TextColor3 = pv.text
 			label.TextScaled = true
 			label.TextXAlignment = Enum.TextXAlignment.Left
 			local sizeCap = Instance.new("UITextSizeConstraint", label)
-			sizeCap.MaxTextSize = 10
+			sizeCap.MaxTextSize = 11
 			sizeCap.MinTextSize = 7
 
 			local hit = Instance.new("TextButton", card)
@@ -5005,7 +5020,7 @@ function Library:Create_Tab(options)
 			Tab[wrapperKey].BackgroundTransparency = 1
 			Tab[wrapperKey].AutomaticSize = Enum.AutomaticSize.Y
 			Tab[wrapperKey].Size = UDim2.new(0, 264, 0, 0)
-			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and 444 or 166, 0, 96)
+			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and 444 or 166, 0, 96 + (Tab.TopOffset or 0))
 			Tab[wrapperKey].Name = (Tab["12"].Name or "Tab") .. "_" .. sectionSide .. "_wrapper"
 
 			local wrapperLayout = Instance.new("UIListLayout", Tab[wrapperKey])
