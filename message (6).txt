@@ -2849,6 +2849,20 @@ local THEME_PREVIEWS = {
 }
 
 local ThemeOriginals = setmetatable({}, { __mode = "k" })
+local AccentTargets = setmetatable({}, { __mode = "k" })
+
+-- instantly recolors everything that uses the accent (no full re-theme)
+function Library:SetAccentLive()
+	local accent = Library.Accent()
+	for inst, props in pairs(AccentTargets) do
+		if inst.Parent then
+			for prop in pairs(props) do
+				pcall(function() inst[prop] = accent end)
+			end
+		end
+	end
+	for _, fn in ipairs(Library.AccentRefreshers or {}) do pcall(fn) end
+end
 local ThemeWatched = {}
 local themeToken = 0
 
@@ -2877,6 +2891,8 @@ local function themeInstance(inst, theme)
 	end
 	for prop, color in pairs(orig) do
 		if colorKey(color) == "235,60,60" then
+			AccentTargets[inst] = AccentTargets[inst] or {}
+			AccentTargets[inst][prop] = true
 			inst[prop] = theme.accent and theme.accent() or color
 		else
 			local fn = (prop == "BackgroundColor3" or prop == "Color") and theme.surface or theme.text
@@ -2993,20 +3009,30 @@ function Library:UpdateCustomSections()
 	end
 end
 
+-- window, sidebar and cards are stacked, so the slider is split across the layers
+-- (s * s = the transparency you actually see)
+function Library:ApplyTransparency()
+	local main = GUI["2"]
+	if not main then return end
+	local custom = Library.CurrentTheme == "Custom Theme"
+	local t = custom and Library.Custom.Transparency or 0
+	local s = math.sqrt(t)
+
+	main.BackgroundTransparency = s
+	if GUI["5"] then GUI["5"].BackgroundTransparency = 0.45 + (1 - 0.45) * s end
+	for _, v in ipairs(main:GetDescendants()) do
+		if v:IsA("Frame") and v.Name:match("_content$") and v.Name ~= "top_bar_content" then
+			v.BackgroundTransparency = s
+		end
+	end
+end
+
 function Library:ApplyCustomVisuals()
 	local main = GUI["2"]
 	if not main then return end
 	local custom = Library.CurrentTheme == "Custom Theme"
 	local C = Library.Custom
-	local t = custom and C.Transparency or 0
-
-	main.BackgroundTransparency = t
-	if GUI["5"] then GUI["5"].BackgroundTransparency = 0.45 + (1 - 0.45) * t end
-	for _, v in ipairs(main:GetDescendants()) do
-		if v:IsA("Frame") and v.Name:match("_content$") and v.Name ~= "top_bar_content" then
-			v.BackgroundTransparency = t
-		end
-	end
+	Library:ApplyTransparency()
 
 	local img = main:FindFirstChild("CustomBackground")
 	if not img then
@@ -3083,7 +3109,7 @@ function Library:ApplyTheme(name)
 	if typeof(writefile) == "function" then pcall(writefile, THEME_FILE, name) end
 
 	for _, fn in ipairs(Library.AccentRefreshers or {}) do pcall(fn) end
-	Library:ApplyCustomVisuals()
+	pcall(function() Library:ApplyCustomVisuals() end)
 
 	themeToken += 1
 	local myToken = themeToken
