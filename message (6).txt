@@ -2805,11 +2805,39 @@ local function invert(c)
 	return Color3.new(1 - c.R * 0.95, 1 - c.G * 0.95, 1 - c.B * 0.95)
 end
 
+Library.Custom = {
+	Accent = Color3.fromRGB(235, 60, 60),
+	Background = Color3.fromRGB(10, 11, 16),
+	Transparency = 0,
+	Image = "",
+	ImageEnabled = false,
+	ImageTransparency = 0.4,
+}
+
+-- accent color used by things that change at runtime (toggles)
+function Library.Accent()
+	if Library.CurrentTheme == "Custom Theme" then return Library.Custom.Accent end
+	return Color3.fromRGB(235, 60, 60)
+end
+
 Library.ThemeOrder = { "Default", "Midnight", "Custom Theme" }
 Library.Themes = {
 	["Default"]      = { surface = function(c) return c:Lerp(Color3.fromRGB(76, 76, 88), 0.28) end },
 	["Midnight"]     = {},
-	["Custom Theme"] = { surface = invert, text = invert },
+	["Custom Theme"] = {
+		surface = function(c)
+			local bg = Library.Custom.Background
+			local d = (c.R + c.G + c.B) / 3 - 0.045
+			if (bg.R * 0.299 + bg.G * 0.587 + bg.B * 0.114) > 0.6 then d = -d end
+			return Color3.new(math.clamp(bg.R + d, 0, 1), math.clamp(bg.G + d, 0, 1), math.clamp(bg.B + d, 0, 1))
+		end,
+		text = function(c)
+			local bg = Library.Custom.Background
+			if (bg.R * 0.299 + bg.G * 0.587 + bg.B * 0.114) > 0.6 then return invert(c) end
+			return c
+		end,
+		accent = function() return Library.Custom.Accent end,
+	},
 }
 Library.CurrentTheme = "Midnight"
 
@@ -2839,7 +2867,7 @@ local function themeInstance(inst, theme)
 		ThemeOriginals[inst] = orig
 		local function grab(prop, set)
 			local ok, v = pcall(function() return inst[prop] end)
-			if ok and typeof(v) == "Color3" and set[colorKey(v)] then orig[prop] = v end
+			if ok and typeof(v) == "Color3" and (set[colorKey(v)] or colorKey(v) == "235,60,60") then orig[prop] = v end
 		end
 		if inst:IsA("GuiObject") then grab("BackgroundColor3", SurfaceSet) end
 		if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then grab("TextColor3", TextSet) end
@@ -2847,8 +2875,12 @@ local function themeInstance(inst, theme)
 		if inst:IsA("UIStroke") then grab("Color", SurfaceSet) end
 	end
 	for prop, color in pairs(orig) do
-		local fn = (prop == "BackgroundColor3" or prop == "Color") and theme.surface or theme.text
-		inst[prop] = fn and fn(color) or color
+		if colorKey(color) == "235,60,60" then
+			inst[prop] = theme.accent and theme.accent() or color
+		else
+			local fn = (prop == "BackgroundColor3" or prop == "Color") and theme.surface or theme.text
+			inst[prop] = fn and fn(color) or color
+		end
 	end
 end
 
@@ -2865,6 +2897,125 @@ local function watchThemeRoot(root)
 	end)
 end
 
+function Library:ResolveImage(src)
+	src = tostring(src or ""):match("^%s*(.-)%s*$")
+	if src == "" then return nil end
+
+	-- normalise "rbxassetid://123" and roblox.com links down to a plain id
+	local id = src:match("^rbxassetid://(%d+)$")
+		or src:match("roblox%.com/asset/%?id=(%d+)")
+		or src:match("roblox%.com/library/(%d+)")
+	if id then src = id end
+
+	Library._ImageCache = Library._ImageCache or {}
+	if Library._ImageCache[src] then return Library._ImageCache[src] end
+
+	local result
+	if tonumber(src) then
+		result = "rbxassetid://" .. src
+		-- decal ids don't render in an ImageLabel, so pull the real image id out of them
+		local ok, objs = pcall(game.GetObjects, game, result)
+		if ok and objs and objs[1] and (objs[1]:IsA("Decal") or objs[1]:IsA("Texture")) then
+			result = objs[1].Texture
+		end
+	elseif src:match("^rbxasset://") or src:match("^rbxthumb://") or src:match("^content://") then
+		result = src
+	elseif typeof(isfile) == "function" and typeof(getcustomasset) == "function" and isfile(src) then
+		local ok, asset = pcall(getcustomasset, src)
+		result = ok and asset or nil
+	elseif src:match("^https?://") then
+		if not (typeof(writefile) == "function" and typeof(isfile) == "function" and typeof(getcustomasset) == "function") then
+			return nil
+		end
+		local h = 0
+		for i = 1, #src do h = (h * 31 + src:byte(i)) % 4294967296 end
+		local path = "Aries/bg_" .. h .. ".png"
+		if not isfile(path) then
+			local ok, data = pcall(game.HttpGet, game, src)
+			if not ok or type(data) ~= "string" or #data < 100 then return nil end
+			writefile(path, data)
+		end
+		local ok, asset = pcall(getcustomasset, path)
+		result = ok and asset or nil
+	end
+
+	if result then Library._ImageCache[src] = result end
+	return result
+end
+
+function Library:ApplyCustomVisuals()
+	local main = GUI["2"]
+	if not main then return end
+	local custom = Library.CurrentTheme == "Custom Theme"
+	local C = Library.Custom
+	local t = custom and C.Transparency or 0
+
+	main.BackgroundTransparency = t
+	if GUI["5"] then GUI["5"].BackgroundTransparency = 0.45 + (1 - 0.45) * t end
+	for _, v in ipairs(main:GetDescendants()) do
+		if v:IsA("Frame") and v.Name:match("_content$") and v.Name ~= "top_bar_content" then
+			v.BackgroundTransparency = t
+		end
+	end
+
+	local img = main:FindFirstChild("CustomBackground")
+	if not img then
+		img = Instance.new("ImageLabel", main)
+		img.Name = "CustomBackground"
+		img.BackgroundTransparency = 1
+		img.BorderSizePixel = 0
+		img.Size = UDim2.new(1, 0, 1, 0)
+		img.ZIndex = 0
+		img.ScaleType = Enum.ScaleType.Crop
+		img.Visible = false
+		img:SetAttribute("NoTheme", true)
+		Instance.new("UICorner", img).CornerRadius = UDim.new(0, 20)
+	end
+	img.ImageTransparency = C.ImageTransparency
+
+	Library._imgToken = (Library._imgToken or 0) + 1
+	local token = Library._imgToken
+	if custom and C.ImageEnabled and C.Image ~= "" then
+		task.spawn(function()
+			local asset = Library:ResolveImage(C.Image)
+			if token ~= Library._imgToken then return end
+			if asset then
+				img.Image = asset
+				img.Visible = true
+			else
+				img.Visible = false
+				Library:Notify("Custom Theme", "Couldn't load that image", 3)
+			end
+		end)
+	else
+		img.Visible = false
+	end
+end
+
+-- debounced, so dragging a color picker doesn't re-theme every frame
+function Library:RefreshCustom()
+	Library._customToken = (Library._customToken or 0) + 1
+	local t = Library._customToken
+	task.delay(0.1, function()
+		if t ~= Library._customToken then return end
+		if Library.CurrentTheme == "Custom Theme" then
+			Library:ApplyTheme("Custom Theme")
+		else
+			Library:ApplyCustomVisuals()
+		end
+	end)
+end
+
+function Library:LoadCustomFromFlags()
+	local F, C = Library.Flags, Library.Custom
+	if typeof(F.Custom_Accent) == "Color3" then C.Accent = F.Custom_Accent end
+	if typeof(F.Custom_Background) == "Color3" then C.Background = F.Custom_Background end
+	if type(F.Custom_Transparency) == "number" then C.Transparency = F.Custom_Transparency / 100 end
+	if type(F.Custom_Image_Toggle) == "boolean" then C.ImageEnabled = F.Custom_Image_Toggle end
+	if type(F.Custom_Image_Source) == "string" then C.Image = F.Custom_Image_Source end
+	if type(F.Custom_Image_Transparency) == "number" then C.ImageTransparency = F.Custom_Image_Transparency / 100 end
+end
+
 function Library:GetSavedTheme()
 	if typeof(isfile) == "function" and isfile(THEME_FILE) then
 		local ok, s = pcall(readfile, THEME_FILE)
@@ -2879,6 +3030,9 @@ function Library:ApplyTheme(name)
 	if not theme then return end
 	Library.CurrentTheme = name
 	if typeof(writefile) == "function" then pcall(writefile, THEME_FILE, name) end
+
+	for _, fn in ipairs(Library.AccentRefreshers or {}) do pcall(fn) end
+	Library:ApplyCustomVisuals()
 
 	themeToken += 1
 	local myToken = themeToken
@@ -3538,6 +3692,7 @@ function Library:Create_Tab(options)
 		Toggle["74"]["Size"] = UDim2.new(0, 30, 0, 17);
 		Toggle["74"]["Position"] = UDim2.new(1, -12, 0.5, 0);
 		Toggle["74"]["Name"] = [[Toggle]];
+		Toggle["74"]:SetAttribute("NoTheme", true)
 		-- Attributes
 		Toggle["74"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
 
@@ -3582,7 +3737,7 @@ function Library:Create_Tab(options)
 		Toggle["79"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 1);
 
 		if Library.Flags[Toggle.flag] then
-			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(235, 60, 60) }):Play()
+			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Library.Accent() }):Play()
 			TweenService:Create(Toggle["76"], TweenInfo.new(0.2), { Position = UDim2.new(0, 15, 0, 2), BackgroundColor3 = Color3.fromRGB(255, 255, 255) }):Play()
 		else
 			TweenService:Create(Toggle["74"], TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(37, 37, 47) }):Play()
@@ -3612,7 +3767,7 @@ function Library:Create_Tab(options)
 			if not bgFrame or not knob then return end
 
 			if Library.Flags[self.flag] then
-				local t1 = TweenService:Create(bgFrame, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(235, 60, 60) })
+				local t1 = TweenService:Create(bgFrame, TweenInfo.new(0.2), { BackgroundColor3 = Library.Accent() })
 				local t2 = TweenService:Create(knob, TweenInfo.new(0.2), { Position = UDim2.new(0, 15, 0, 2), BackgroundColor3 = Color3.fromRGB(255, 255, 255) })
 				t1:Play()
 				t2:Play()
@@ -3762,6 +3917,13 @@ function Library:Create_Tab(options)
 				pcall(function() Toggle:Toggle(Library.Flags[Toggle.flag] == true) end)
 			end)
 		end
+
+		Library.AccentRefreshers = Library.AccentRefreshers or {}
+		table.insert(Library.AccentRefreshers, function()
+			if Toggle.flag and Library.Flags[Toggle.flag] and Toggle["74"] and Toggle["74"].Parent then
+				Toggle["74"].BackgroundColor3 = Library.Accent()
+			end
+		end)
 
 		return Toggle
 	end
@@ -4600,6 +4762,7 @@ function Library:Create_Tab(options)
 		ColorPicker["cp2"]["Size"] = UDim2.new(0, 16, 0, 16);
 		ColorPicker["cp2"]["Position"] = UDim2.new(1, -12, 0.5, 0);
 		ColorPicker["cp2"]["Name"] = [[ColorSwatch]];
+		ColorPicker["cp2"]:SetAttribute("NoTheme", true)
 		ColorPicker["cp2"]:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0);
 
 		local cpSwatch_c = Instance.new("UICorner", ColorPicker["cp2"]);
