@@ -613,7 +613,7 @@ function Library.new()
 	GUI["a"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
 	GUI["a"]["TextColor3"] = Color3.fromRGB(243, 243, 247);
 	GUI["a"]["BackgroundTransparency"] = 1;
-	GUI["a"]["Size"] = UDim2.new(0, 90, 0, 13);
+	GUI["a"]["Size"] = UDim2.new(0, 90, 0, 16);
 	GUI["a"]["Text"] = Player.DisplayName;
 	GUI["a"]["Name"] = [[Name]];
 	GUI["a"]["Position"] = UDim2.new(0, 57, 0, 0);
@@ -629,7 +629,7 @@ function Library.new()
 	GUI["b"]["FontFace"] = Font.new([[rbxasset://fonts/families/Montserrat.json]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
 	GUI["b"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
 	GUI["b"]["BackgroundTransparency"] = 1;
-	GUI["b"]["Size"] = UDim2.new(0, 96, 0, 11);
+	GUI["b"]["Size"] = UDim2.new(0, 96, 0, 13);
 	GUI["b"]["Text"] = Player.Name;
 	GUI["b"]["Name"] = [[Name]];
 	GUI["b"]["Position"] = UDim2.new(0, 57, 0, 15);
