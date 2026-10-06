@@ -747,12 +747,16 @@ function Library.new()
 	GUI["f0"]["CornerRadius"] = UDim.new(0, 12);
 
 
-	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.UIStroke
-	GUI["f1"] = Instance.new("UIStroke", GUI["ef"]);
-	GUI["f1"]["Transparency"] = 0.4;
-	GUI["f1"]["Color"] = Color3.fromRGB(47, 47, 58);
-	-- Attributes
-	GUI["f1"]:SetAttribute([[fadeOriginal_Transparency]], 0.4);
+    -- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.UIStroke
+    GUI["f1"] = Instance.new("UIStroke", GUI["ef"]);
+    GUI["f1"]["Color"] = Color3.fromRGB(235, 60, 60);
+    GUI["f1"]["Thickness"] = 1.2;
+    GUI["f1"]["Transparency"] = 0.2;
+    GUI["f1"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+    -- draw the stroke inside the edge so ClipsDescendants can't cut it off
+    pcall(function() GUI["f1"].BorderStrokePosition = Enum.BorderStrokePosition.Inner end)
+    -- Attributes
+    GUI["f1"]:SetAttribute([[fadeOriginal_Transparency]], 0.2);
 
 
 	-- StarterGui.Byte_UI.Main_Menu_Window.name_config_window.IMG_CloudIcon
