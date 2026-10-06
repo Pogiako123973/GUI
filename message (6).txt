@@ -630,8 +630,8 @@ function Library.new()
 	GUI["b"]["TextColor3"] = Color3.fromRGB(143, 143, 154);
 	GUI["b"]["BackgroundTransparency"] = 1;
 	GUI["b"]["Size"] = UDim2.new(0, 96, 0, 11);
-	GUI["b"]["Text"] = [[Till:  Lifetime]];
-	GUI["b"]["Name"] = [[Expiry]];
+	GUI["b"]["Text"] = Player.Name;
+	GUI["b"]["Name"] = [[Name]];
 	GUI["b"]["Position"] = UDim2.new(0, 57, 0, 15);
 	-- Attributes
 	GUI["b"]:SetAttribute([[fadeOriginal_TextTransparency]], 0);
@@ -5837,7 +5837,7 @@ function Library:Notify(title, text, dur)
 	local gui = Library._NotifyGui
 	if not gui or not gui.Parent then
 		gui = Instance.new("ScreenGui")
-		gui.Name = "Zenthra Notification"
+		gui.Name = "Vanana Notification"
 		gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		gui.ResetOnSpawn = false
 		gui.DisplayOrder = 10
