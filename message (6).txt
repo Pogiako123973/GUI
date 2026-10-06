@@ -9,12 +9,12 @@ local GUI = {
 	Widgets = {}
 }
 
-if not isfolder('Aries') then
-	makefolder('Aries')
+if not isfolder('Vananavan') then
+	makefolder('Vananavan')
 end
 
-if not isfolder("Aries/Presets") then
-	makefolder("Aries/Presets")
+if not isfolder("Vananavan/Presets") then
+	makefolder("Vananavan/Presets")
 end
 
 function Library:save_flags()
@@ -28,17 +28,17 @@ function Library:save_flags()
 	end
 	local flags = HttpService:JSONEncode(safe)
 
-	writefile('Aries/' .. game.GameId .. '.lua', flags)
+	writefile('Vananavan/' .. game.GameId .. '.lua', flags)
 	if Library.SyncPreset then pcall(Library.SyncPreset) end
 end
 
 function Library:load_flags()
-	if not isfile('Aries/' .. game.GameId .. '.lua') then
+	if not isfile('Vananavan/' .. game.GameId .. '.lua') then
 		Library.save_flags()
 		return
 	end
 
-	local flags = readfile('Aries/' .. game.GameId .. '.lua')
+	local flags = readfile('Vananavan/' .. game.GameId .. '.lua')
 
 	if not flags then
 		Library.save_flags()
@@ -71,11 +71,11 @@ end
 
 function Library:save_preset(name, data)
 	local encoded = HttpService:JSONEncode(data)
-	writefile("Aries/Presets/" .. name .. ".json", encoded)
+	writefile("Vananavan/Presets/" .. name .. ".json", encoded)
 end
 
 function Library:load_preset(name)
-	local path = "Aries/Presets/" .. name .. ".json"
+	local path = "Vananavan/Presets/" .. name .. ".json"
 
 	if not isfile(path) then
 		return nil
@@ -88,11 +88,11 @@ end
 -- Auto-load of last preset on startup removed; presets are only displayed in the UI
 
 function Library:list_presets()
-	local files = listfiles("Aries/Presets")
+	local files = listfiles("Vananavan/Presets")
 	local presets = {}
 
 	for _, file in files do
-		local presetName = file:match("Aries[/\\]Presets[/\\](.+)%.json")
+		local presetName = file:match("Vananavan[/\\]Presets[/\\](.+)%.json")
 
 		if presetName then
 			table.insert(presets, presetName)
@@ -2665,7 +2665,7 @@ function Library.new()
 						end
 						if oldName ~= trimmed then
 							pcall(function()
-								delfile("Aries/Presets/" .. oldName .. ".json")
+								delfile("Vananavan/Presets/" .. oldName .. ".json")
 							end)
 						end
 					end
@@ -2696,7 +2696,7 @@ function Library.new()
 				end
 
 				pcall(function()
-					delfile("Aries/Presets/" .. preset.name .. ".json")
+					delfile("Vananavan/Presets/" .. preset.name .. ".json")
 				end)
 
 				if indicator.Parent == row then
@@ -2816,7 +2816,7 @@ function Library.new()
 end
 
 -- ================= THEME SYSTEM =================
-local THEME_FILE = "Aries/theme.txt"
+local THEME_FILE = "Vananavan/theme.txt"
 local THEME_ACCENT = Color3.fromRGB(235, 60, 60)
 
 local THEME_SURFACES = {
@@ -2984,7 +2984,7 @@ function Library:ResolveImage(src)
 
 		local h = 0
 		for i = 1, #src do h = (h * 31 + src:byte(i)) % 4294967296 end
-		local base = "Aries/bg_" .. h
+		local base = "Vananavan/bg_" .. h
 		local path = (isfile(base .. ".png") and (base .. ".png")) or (isfile(base .. ".jpg") and (base .. ".jpg")) or nil
 
 		if not path then
