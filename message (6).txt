@@ -97,10 +97,14 @@ end
 function GUI.SaveWindowSize()
 	local main = GUI["2"]
 	if not main or typeof(writefile) ~= "function" then return end
+	if not Library.Flags.Save_Window_Size then return end
 	pcall(writefile, WINDOW_SIZE_FILE, HttpService:JSONEncode({ W = main.Size.X.Offset, H = main.Size.Y.Offset }))
 end
 
+Library.SaveWindowSize = function() GUI.SaveWindowSize() end
+
 function GUI.LoadWindowSize()
+	if not Library.Flags.Save_Window_Size then return end
 	if typeof(isfile) ~= "function" or not isfile(WINDOW_SIZE_FILE) then return end
 	local ok, data = pcall(function() return HttpService:JSONDecode(readfile(WINDOW_SIZE_FILE)) end)
 	if not ok or type(data) ~= "table" or not tonumber(data.W) or not tonumber(data.H) then return end
@@ -199,6 +203,7 @@ function Library.IsPresetKey(k)
 	if type(k) ~= "string" then return false end
 	if k == "__lastPreset" or k == "Show_Hide_UI_Keybind" then return false end
 	if k == "Show_Hide_UI_Keybind_keybind" then return false end
+	if k == "Save_Window_Size" then return false end
 	return true
 end
 
@@ -2742,7 +2747,7 @@ function Library.new()
 
 			-- Phase 1: Turn off all toggle flags so nothing from the old preset interacts with the new one
 			for k, v in pairs(Library.Flags) do
-				if k ~= "__lastPreset" and type(v) == "boolean" then
+				if Library.IsPresetKey(k) and type(v) == "boolean" then
 					Library.Flags[k] = false
 				end
 			end
