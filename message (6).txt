@@ -62,10 +62,39 @@ Library.load_flags()
 
 Library.Defaults = {}
 
+function Library.RefreshKeybind(w)
+	if not w or not w.flag or not w["72_text"] then return end
+	local saved = Library.Flags[w.flag .. "_keybind"]
+	local key
+	if type(saved) == "table" then
+		if saved.keyType == "KeyCode" then
+			key = Enum.KeyCode[saved.keyName]
+		elseif saved.keyType == "UserInputType" then
+			key = Enum.UserInputType[saved.keyName]
+		end
+	end
+	if key then
+		w.Keybind = key
+		w.KeybindName = saved.displayName or key.Name
+		w.KeybindMode = saved.mode or "toggle"
+		Library.Keybinds[w] = { key = key, mode = w.KeybindMode, flag = w.flag }
+		w["72_text"].Text = w.KeybindName
+		w["72_text"].TextColor3 = Color3.fromRGB(235, 60, 60)
+		w["73_s"].Transparency = 0
+	else
+		w.Keybind = nil
+		w.KeybindName = nil
+		Library.Keybinds[w] = nil
+		w["72_text"].Text = "···"
+		w["72_text"].TextColor3 = Color3.fromRGB(138, 138, 148)
+		w["73_s"].Transparency = 1
+	end
+end
+
 function Library.IsPresetKey(k)
 	if type(k) ~= "string" then return false end
 	if k == "__lastPreset" or k == "Show_Hide_UI_Keybind" then return false end
-	if k:sub(-8) == "_keybind" then return false end
+	if k == "Show_Hide_UI_Keybind_keybind" then return false end
 	return true
 end
 
@@ -2480,7 +2509,7 @@ function Library.new()
 				preset.deleteIcon.ImageColor3 = selected and COLOR_DELETE_ACTIVE or COLOR_DELETE_IDLE
 			end
 
-			if activePreset and indicator.Parent ~= nil then
+			if activePreset then
 				indicator.Parent = activePreset.row
 				indicator.Position = UDim2.new(0, 0, 0, 8)
 				ConfigButtonLabel.Text = activePreset.name
@@ -3683,6 +3712,10 @@ function Library:Create_Tab(options)
 			end
 		end
 
+		table.insert(GUI.Widgets, function()
+			pcall(Library.RefreshKeybind, KeybindWidget)
+		end)
+
 		function KeybindWidget:Toggle(state)
 			if KeybindWidget._callback then
 				KeybindWidget._callback()
@@ -4026,6 +4059,7 @@ function Library:Create_Tab(options)
 
 		if Toggle.flag then
 			table.insert(GUI.Widgets, function()
+				pcall(Library.RefreshKeybind, Toggle)
 				pcall(function() Toggle:Toggle(Library.Flags[Toggle.flag] == true) end)
 			end)
 		end
