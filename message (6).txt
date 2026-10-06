@@ -9,6 +9,110 @@ local GUI = {
 	Widgets = {}
 }
 
+-- ================= RESIZE / LAYOUT =================
+local WINDOW_SIZE_FILE = "Vananavan/window_size.json"
+local DEFAULT_W, DEFAULT_H = 732, 440
+local MIN_W, MIN_H = 600, 380
+
+GUI.Layout = { LeftX = 166, RightX = 444, ColW = 264, Avail = 542, ContentH = 310 }
+GUI.ColumnFits = setmetatable({}, { __mode = "k" })
+
+function GUI.ColX(side)
+	return side == 'right' and GUI.Layout.RightX or GUI.Layout.LeftX
+end
+
+function GUI.FitColumn(frame)
+	GUI.ColumnFits[frame] = true
+	frame.Size = UDim2.new(0, GUI.Layout.ColW, frame.Size.Y.Scale, frame.Size.Y.Offset)
+end
+
+function GUI.ApplyLayout(w, h)
+	local main = GUI["2"]
+	if not main then return end
+	w = math.floor(math.max(MIN_W, w))
+	h = math.floor(math.max(MIN_H, h))
+	main.Size = UDim2.fromOffset(w, h)
+
+	local L = GUI.Layout
+	L.Avail = w - 166 - 24
+	L.ColW = math.floor((L.Avail - 14) / 2)
+	L.LeftX = 166
+	L.RightX = 166 + L.ColW + 14
+	L.ContentH = h - 130
+
+	if GUI["5"] then GUI["5"].Position = UDim2.new(0, -27, 0, 8) end
+	if GUI["TabContainer"] then GUI["TabContainer"].Size = UDim2.new(1, 0, 1, -140) end
+	if GUI["9"] then GUI["9"].Position = UDim2.new(0, 0, 1, -44) end
+	if GUI["26"] then GUI["26"].Position = UDim2.new(1, -121, 0, 23) end
+	if GUI["ef"] then GUI["ef"].Position = UDim2.new(0, w + 19, 0, 3) end
+	if GUI["33"] then GUI["33"].Position = UDim2.new(0, L.RightX, 0, 92) end
+
+	for _, side in ipairs({ "Left", "Right" }) do
+		local sf = main:FindFirstChild("SearchScroll" .. side)
+		if sf then
+			sf.Size = UDim2.new(0, L.ColW, 0, h - 108)
+			sf.Position = UDim2.new(0, side == "Right" and L.RightX or L.LeftX, 0, 100)
+		end
+	end
+
+	for frame in pairs(GUI.ColumnFits) do
+		if frame.Parent then
+			frame.Size = UDim2.new(0, L.ColW, frame.Size.Y.Scale, frame.Size.Y.Offset)
+		end
+	end
+
+	for _, tab in ipairs(GUI.Tabs) do
+		for _, entry in ipairs(tab.AllContainers or {}) do
+			local c = entry.container
+			if c and c.Parent then
+				local y = c.Position.Y.Offset
+				if entry.skipSearch then
+					c.Size = UDim2.new(0, L.Avail, 0, c.Size.Y.Offset)
+					c.Position = UDim2.new(0, L.LeftX, 0, y)
+				else
+					if c.Parent == main then
+						c.Position = UDim2.new(0, GUI.ColX(entry.section), 0, y)
+					end
+					if c:IsA("ScrollingFrame") then
+						c.Size = UDim2.new(0, L.ColW + 6, 0, math.max(60, L.ContentH - (tab.TopOffset or 0)))
+					else
+						c.Size = UDim2.new(0, L.ColW, c.Size.Y.Scale, c.Size.Y.Offset)
+					end
+				end
+			end
+		end
+	end
+end
+
+function GUI.QueueReflow()
+	if GUI._reflowQueued then return end
+	GUI._reflowQueued = true
+	task.defer(function()
+		GUI._reflowQueued = false
+		local main = GUI["2"]
+		if main then GUI.ApplyLayout(main.Size.X.Offset, main.Size.Y.Offset) end
+	end)
+end
+
+function GUI.SaveWindowSize()
+	local main = GUI["2"]
+	if not main or typeof(writefile) ~= "function" then return end
+	pcall(writefile, WINDOW_SIZE_FILE, HttpService:JSONEncode({ W = main.Size.X.Offset, H = main.Size.Y.Offset }))
+end
+
+function GUI.LoadWindowSize()
+	if typeof(isfile) ~= "function" or not isfile(WINDOW_SIZE_FILE) then return end
+	local ok, data = pcall(function() return HttpService:JSONDecode(readfile(WINDOW_SIZE_FILE)) end)
+	if not ok or type(data) ~= "table" or not tonumber(data.W) or not tonumber(data.H) then return end
+	local scale = GUI._targetScale or 1
+	local vp = workspace.CurrentCamera.ViewportSize
+	GUI.ApplyLayout(
+		math.min(tonumber(data.W), math.max(MIN_W, vp.X / scale - 20)),
+		math.min(tonumber(data.H), math.max(MIN_H, vp.Y / scale - 20))
+	)
+end
+-- ================= END RESIZE / LAYOUT =================
+
 if not isfolder('Vananavan') then
 	makefolder('Vananavan')
 end
@@ -2123,7 +2227,7 @@ function Library.new()
 		end)
 
 		UIS.InputChanged:Connect(function(input)
-			if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			if Dragging and not GUI.Resizing and (input.UserInputType == Enum.UserInputType.MouseMovement
 				or input.UserInputType == Enum.UserInputType.Touch) then
 
 				local delta = input.Position - DragStart
@@ -2142,6 +2246,107 @@ function Library.new()
 			GUI["ef"].Visible = not GUI["ef"].Visible
 		end)
 		]]
+
+				-- ===== Resize grip (bottom-right) =====
+		local GRIP = 24
+		local S = 16
+		local Grip = Instance.new("TextButton", Frame)
+		Grip.Name = "ResizeGrip"
+		Grip.Text = ""
+		Grip.AutoButtonColor = false
+		Grip.BackgroundTransparency = 1
+		Grip.AnchorPoint = Vector2.new(1, 1)
+		Grip.Position = UDim2.new(1, -4, 1, -4)
+		Grip.Size = UDim2.fromOffset(GRIP, GRIP)
+		Grip.ZIndex = 50
+		GUI.ResizeGrip = Grip
+
+		local GripLines = {}
+		for _, s in ipairs({ 12, 6, 0 }) do
+			local len = (S - s) * math.sqrt(2)
+			local c = (s + S) / 2
+			local line = Instance.new("Frame", Grip)
+			line.Name = "GripLine"
+			line.BorderSizePixel = 0
+			line.BackgroundColor3 = Color3.fromRGB(235, 60, 60)
+			line.BackgroundTransparency = 0.45
+			line.AnchorPoint = Vector2.new(0.5, 0.5)
+			line.Size = UDim2.fromOffset(len, 2)
+			line.Rotation = -45
+			line.Position = UDim2.fromOffset(GRIP - S + c, GRIP - S + c)
+			line.ZIndex = 51
+			Instance.new("UICorner", line).CornerRadius = UDim.new(1, 0)
+			table.insert(GripLines, line)
+		end
+
+		local function SetGripAlpha(a)
+			for _, l in ipairs(GripLines) do
+				TweenService:Create(l, TweenInfo.new(0.15), { BackgroundTransparency = a }):Play()
+			end
+		end
+
+		Grip.MouseEnter:Connect(function() SetGripAlpha(0) end)
+		Grip.MouseLeave:Connect(function()
+			if not GUI.Resizing then SetGripAlpha(0.45) end
+		end)
+
+		local ResizeStart, SizeStart, PosStart
+
+		local function StopResize()
+			if not GUI.Resizing then return end
+			GUI.Resizing = false
+			Dragging = false
+			SetGripAlpha(0.45)
+			GUI.SaveWindowSize()
+		end
+
+		Grip.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.Touch then
+				Dragging = false
+				GUI.Resizing = true
+				ResizeStart = Vector2.new(input.Position.X, input.Position.Y)
+				SizeStart = Vector2.new(Frame.Size.X.Offset, Frame.Size.Y.Offset)
+				PosStart = Frame.Position
+				SetGripAlpha(0)
+			end
+		end)
+
+		UIS.InputChanged:Connect(function(input)
+			if not GUI.Resizing then return end
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement
+				and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+			local scale = GUI._targetScale or 1
+			local vp = workspace.CurrentCamera.ViewportSize
+			local delta = (Vector2.new(input.Position.X, input.Position.Y) - ResizeStart) / scale
+
+			local w = math.floor(math.clamp(SizeStart.X + delta.X, MIN_W, math.max(MIN_W, vp.X / scale - 20)))
+			local h = math.floor(math.clamp(SizeStart.Y + delta.Y, MIN_H, math.max(MIN_H, vp.Y / scale - 20)))
+
+			local dW, dH = (w - SizeStart.X) * scale, (h - SizeStart.Y) * scale
+			Frame.Position = UDim2.new(PosStart.X.Scale, PosStart.X.Offset + dW / 2, PosStart.Y.Scale, PosStart.Y.Offset + dH / 2)
+
+			GUI.ApplyLayout(w, h)
+		end)
+
+		UIS.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.Touch then
+				StopResize()
+			end
+		end)
+
+		Grip.MouseButton2Click:Connect(function()
+			local scale = GUI._targetScale or 1
+			local cur = Frame.Size
+			local dW, dH = (DEFAULT_W - cur.X.Offset) * scale, (DEFAULT_H - cur.Y.Offset) * scale
+			Frame.Position = UDim2.new(Frame.Position.X.Scale, Frame.Position.X.Offset + dW / 2, Frame.Position.Y.Scale, Frame.Position.Y.Offset + dH / 2)
+			GUI.ApplyLayout(DEFAULT_W, DEFAULT_H)
+			GUI.SaveWindowSize()
+		end)
+
+		GUI.LoadWindowSize()
 
 		local function Tween(frame, props)
 			local tween = TweenService:Create(
@@ -2276,7 +2481,7 @@ function Library.new()
 
 						local sec = entry.section
 						entry.container.Visible = (tab == GUI.CurrentTabs[sec])
-						entry.container.Position = UDim2.new(0, sec == 'right' and 444 or 166, 0, 96 + (tab.TopOffset or 0))
+						entry.container.Position = UDim2.new(0, GUI.ColX(sec), 0, 96 + (tab.TopOffset or 0))
 						if Library.UpdateCustomSections then Library:UpdateCustomSections() end
 					end
 				end
@@ -3316,8 +3521,8 @@ function Library:Create_Tab(options)
 	Tab.ContentContainer.BorderSizePixel = 0
 	Tab.ContentContainer.BackgroundColor3 = Color3.fromRGB(14, 15, 20)
 	Tab.ContentContainer.AutomaticSize = Enum.AutomaticSize.Y
-	Tab.ContentContainer.Size = UDim2.new(0, 264, 0, 0)
-	Tab.ContentContainer.Position = UDim2.new(0, Tab.Section == 'right' and 444 or 166, 0, 118)
+	Tab.ContentContainer.Size = UDim2.new(0, GUI.Layout.ColW, 0, 0)
+	Tab.ContentContainer.Position = UDim2.new(0, GUI.ColX(Tab.Section), 0, 118)
 	Tab.ContentContainer.Name = options.name .. "_content"
 	Tab.ContentContainer:SetAttribute([[fadeOriginal_BackgroundTransparency]], 0)
 	Tab.ContentContainer.Visible = (GUI.CurrentTabs[Tab.Section] == Tab)
@@ -4100,6 +4305,7 @@ function Library:Create_Tab(options)
 		Slider["6c"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
 		Slider["6c"]["AutomaticSize"] = Enum.AutomaticSize.Y;
 		Slider["6c"]["Size"] = UDim2.new(0, 264, 0, 0);
+		GUI.FitColumn(Slider["6c"])
 		Slider["6c"]["Position"] = UDim2.new(0, 0, 0, 0);
 		Slider["6c"]["Name"] = [[AutoTotem_main]];
 		-- Attributes
@@ -5196,8 +5402,8 @@ function Library:Create_Tab(options)
         row.Name = options.name .. "_themepicker"
         row.BackgroundTransparency = 1
         row.BorderSizePixel = 0
-        row.Size = UDim2.new(0, 542, 0, ROW_H)
-        row.Position = UDim2.new(0, 166, 0, 96)
+        row.Size = UDim2.new(0, GUI.Layout.Avail, 0, ROW_H)
+        row.Position = UDim2.new(0, GUI.Layout.LeftX, 0, 96)
         row.Visible = (GUI.CurrentTabs['left'] == Tab)
         row:SetAttribute("fadeOriginal_BackgroundTransparency", 1)
 
@@ -5308,7 +5514,8 @@ function Library:Create_Tab(options)
 		end
 
 		function ThemePicker:GetValue()
-			return ThemePicker.Selected
+			GUI.QueueReflow()
+		return ThemePicker.Selected
 		end
 
 		task.delay(1.5, function()
@@ -5347,7 +5554,7 @@ function Library:Create_Tab(options)
 			Tab[wrapperKey].BackgroundTransparency = 1
 			Tab[wrapperKey].AutomaticSize = Enum.AutomaticSize.Y
 			Tab[wrapperKey].Size = UDim2.new(0, 264, 0, 0)
-			Tab[wrapperKey].Position = UDim2.new(0, sectionSide == 'right' and 444 or 166, 0, 96 + (Tab.TopOffset or 0))
+			Tab[wrapperKey].Position = UDim2.new(0, GUI.ColX(sectionSide), 0, 96 + (Tab.TopOffset or 0))
 			Tab[wrapperKey].Name = (Tab["12"].Name or "Tab") .. "_" .. sectionSide .. "_wrapper"
 
 			local wrapperLayout = Instance.new("UIListLayout", Tab[wrapperKey])
@@ -5373,6 +5580,7 @@ function Library:Create_Tab(options)
 		Section.ContentContainer.BackgroundColor3 = Color3.fromRGB(14, 15, 20)
 		Section.ContentContainer.AutomaticSize = Enum.AutomaticSize.Y
 		Section.ContentContainer.Size = UDim2.new(0, 264, 0, 0)
+		GUI.FitColumn(Section.ContentContainer)
 		Section.ContentContainer.Name = (Tab["12"].Name or "Tab") .. "_" .. sectionSide .. "_content"
 		Section.ContentContainer:SetAttribute("fadeOriginal_BackgroundTransparency", 0)
 		Section.ContentContainer.Visible = true  -- Visibility handled by wrapper
@@ -5466,6 +5674,7 @@ function Library:Create_Tab(options)
 			return Tab:Create_Keybind(opts)
 		end
 
+		GUI.QueueReflow()
 		return Section
 	end
 
