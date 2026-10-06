@@ -29,6 +29,7 @@ function Library:save_flags()
 	local flags = HttpService:JSONEncode(safe)
 
 	writefile('Aries/' .. game.GameId .. '.lua', flags)
+	if Library.SyncPreset then pcall(Library.SyncPreset) end
 end
 
 function Library:load_flags()
@@ -58,6 +59,15 @@ function Library:load_flags()
 end
 
 Library.load_flags()
+
+Library.Defaults = {}
+
+function Library.IsPresetKey(k)
+	if type(k) ~= "string" then return false end
+	if k == "__lastPreset" or k == "Show_Hide_UI_Keybind" then return false end
+	if k:sub(-8) == "_keybind" then return false end
+	return true
+end
 
 function Library:save_preset(name, data)
 	local encoded = HttpService:JSONEncode(data)
@@ -2336,40 +2346,37 @@ function Library.new()
 
 		local function snapshotFlags()
 			local out = {}
-			for k, v in Library.Flags do
-				if type(v) == "table" then
-					local copy = {}
-					for k2, v2 in v do
-						copy[k2] = v2
+			for k, v in pairs(Library.Flags) do
+				if Library.IsPresetKey(k) then
+					if type(v) == "table" then
+						local copy = {}
+						for k2, v2 in pairs(v) do copy[k2] = v2 end
+						out[k] = copy
+					else
+						out[k] = v
 					end
-					out[k] = copy
-				else
-					out[k] = v
 				end
 			end
 			return out
 		end
 
 		local function applyFlags(flags)
-			if not flags then return end
-			-- Clear existing flags except __lastPreset so each preset is independent
+			flags = flags or {}
 			for k in pairs(Library.Flags) do
-				if k ~= "__lastPreset" and k ~= "Show_Hide_UI_Keybind" then
-					Library.Flags[k] = nil
-				end
+				if Library.IsPresetKey(k) then Library.Flags[k] = nil end
 			end
-			-- Apply the new preset's flags
-			for k, v in flags do
-				if k ~= "Show_Hide_UI_Keybind" then
-					Library.Flags[k] = v
-				end
+			for k, v in pairs(Library.Defaults) do
+				if Library.IsPresetKey(k) then Library.Flags[k] = v end
+			end
+			for k, v in pairs(flags) do
+				if Library.IsPresetKey(k) then Library.Flags[k] = v end
 			end
 		end
 
 		local function serializeFlags(flags)
 			local out = {}
 			for k, v in pairs(flags) do
-				if k == "__lastPreset" then continue end
+				if not Library.IsPresetKey(k) then continue end
 				if typeof(v) == "Color3" then
 					out[k] = {__type = "Color3", R = v.R, G = v.G, B = v.B}
 				else
@@ -2396,18 +2403,27 @@ function Library.new()
 
 		local function scheduleSave()
 			if loading then return end
+			if activePreset then activePreset.flags = snapshotFlags() end
 
 			for _, preset in presets do
-				local data = serializeFlags(preset.flags or {})
-				Library:save_preset(preset.name, data)
+				Library:save_preset(preset.name, serializeFlags(preset.flags or {}))
 			end
 
-			if activePreset then
-				Library.Flags.__lastPreset = activePreset.name
-			else
-				Library.Flags.__lastPreset = nil
-			end
+			Library.Flags.__lastPreset = activePreset and activePreset.name or nil
 			Library.save_flags()
+		end
+
+		local syncToken = 0
+		Library.SyncPreset = function()
+			if loading or not Library.SyncReady or Library.ApplyingPreset or not activePreset then return end
+			local p = activePreset
+			p.flags = snapshotFlags()
+			syncToken += 1
+			local t = syncToken
+			task.delay(0.4, function()
+				if t ~= syncToken then return end
+				pcall(function() Library:save_preset(p.name, serializeFlags(p.flags)) end)
+			end)
 		end
 
 		local function renderRows()
@@ -2501,6 +2517,7 @@ function Library.new()
 			GUI.ApplyingPreset = false
 			Library.ApplyingPreset = false
 
+			preset.flags = snapshotFlags()
 			renderStates()
 			scheduleSave()
 		end
@@ -2729,11 +2746,27 @@ function Library.new()
 		else
 			-- No saved presets, create defaults
 			for index, name in DEFAULT_PRESETS do
-				addPreset(name, nil, index == 1)
+				if index == 1 then
+					addPreset(name, nil, true)
+				else
+					addPreset(name, {}, false)
+				end
+			end
+		end
+
+		local last = Library.Flags.__lastPreset
+		if last then
+			for _, p in presets do
+				if p.name == last then
+					activePreset = p
+					applyFlags(p.flags)
+					break
+				end
 			end
 		end
 
 		loading = false
+		task.delay(2, function() Library.SyncReady = true end)
 
 		SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
 			renderRows()
@@ -2770,7 +2803,8 @@ function Library.new()
 				newName = baseName .. " (" .. counter .. ")"
 			end
 
-			local preset = addPreset(newName, snapshotFlags(), true)
+			if activePreset then activePreset.flags = snapshotFlags() end
+			local preset = addPreset(newName, {}, false)
 			selectPreset(preset)
 		end)
 
@@ -3668,6 +3702,7 @@ function Library:Create_Tab(options)
 
 		-- StarterGui.Byte_UI.Main_Menu_Window.AutoTotem_main.AutoTotem_enable
 		local toggleParent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+		if options.flag then Library.Defaults[options.flag] = false end
 		Toggle["70"] = Instance.new("Frame", toggleParent);
 		Toggle["70"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
 		Toggle["70"]["Size"] = UDim2.new(1, 0, 0, 38);
@@ -4016,6 +4051,7 @@ function Library:Create_Tab(options)
 		}
 
 		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
+		if options.flag then Library.Defaults[options.flag] = options.default end
 		Slider["6c"] = Instance.new("Frame", parent);
 		Slider["6c"]["BorderSizePixel"] = 0;
 		Slider["6c"]["BackgroundColor3"] = Color3.fromRGB(14, 15, 20);
@@ -4280,6 +4316,7 @@ function Library:Create_Tab(options)
 		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
 
 		-- Row container (same style as toggle/slider rows)
+		if options.flag then Library.Defaults[options.flag] = options.default or options.options[1] end
 		Dropdown["d70"] = Instance.new("Frame", parent);
 		Dropdown["d70"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
 		Dropdown["d70"]["Size"] = UDim2.new(1, 0, 0, 38);
@@ -4766,6 +4803,7 @@ function Library:Create_Tab(options)
 			Dropdown["d73"].Text = value
 			if Dropdown.flag then
 				Library.Flags[Dropdown.flag] = value
+				if not GUI.ApplyingPreset then pcall(Library.save_flags) end
 			end
 			if options.callback then
 				options.callback(value)
@@ -4812,6 +4850,7 @@ function Library:Create_Tab(options)
 		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
 
 		-- Row container (same style as toggle/slider/dropdown rows)
+		if options.flag then Library.Defaults[options.flag] = options.default end
 		ColorPicker["cp0"] = Instance.new("Frame", parent);
 		ColorPicker["cp0"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47);
 		ColorPicker["cp0"]["Size"] = UDim2.new(1, 0, 0, 38);
@@ -4935,6 +4974,7 @@ function Library:Create_Tab(options)
 		local parent = (options.tab and options.tab.ContentContainer) or Tab.ContentContainer
 
 		-- Row container (same style as dropdown/toggle/slider rows)
+		if options.flag then Library.Defaults[options.flag] = options.default or '' end
 		TextBox["t70"] = Instance.new("Frame", parent)
 		TextBox["t70"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 47)
 		-- TextBox["t70"]["Size"] = UDim2.new(1, 0, 0, 56)
