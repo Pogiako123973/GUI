@@ -2295,6 +2295,17 @@ function Library.new()
 			if not GUI.Resizing then SetGripAlpha(0.45) end
 		end)
 
+		local LastGripClick = 0
+
+		local function ResetSize()
+			local scale = GUI._targetScale or 1
+			local cur = Frame.Size
+			local dW, dH = (DEFAULT_W - cur.X.Offset) * scale, (DEFAULT_H - cur.Y.Offset) * scale
+			Frame.Position = UDim2.new(Frame.Position.X.Scale, Frame.Position.X.Offset + dW / 2, Frame.Position.Y.Scale, Frame.Position.Y.Offset + dH / 2)
+			GUI.ApplyLayout(DEFAULT_W, DEFAULT_H)
+			GUI.SaveWindowSize()
+		end
+
 		local ResizeStart, SizeStart, PosStart
 
 		local function StopResize()
@@ -2309,6 +2320,13 @@ function Library.new()
 			if input.UserInputType == Enum.UserInputType.MouseButton1
 				or input.UserInputType == Enum.UserInputType.Touch then
 				Dragging = false
+				local now = os.clock()
+				if now - LastGripClick <= 0.3 then
+					LastGripClick = 0
+					ResetSize()
+					return
+				end
+				LastGripClick = now
 				GUI.Resizing = true
 				ResizeStart = Vector2.new(input.Position.X, input.Position.Y)
 				SizeStart = Vector2.new(Frame.Size.X.Offset, Frame.Size.Y.Offset)
