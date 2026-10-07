@@ -2202,10 +2202,196 @@ function Library.new()
 		local Frame = GUI["2"] -- Main_Menu_Window
 
 		local Dragging = false
-		local DragStart, StartPos
+		local DragStart, StartOffset
 
 		Frame.Active = true
 		Frame.Selectable = true
+
+		-- ===== Drag animation: soft follow + magnetic snap + corner brackets + scan sweep =====
+		local FOLLOW_K, FOLLOW_DAMP = 0.2, 0.68   -- follow spring (higher K = tighter, lower DAMP = more bounce)
+		local SNAP_DIST, SNAP_MARGIN = 40, 12     -- how close before it snaps / gap kept from the screen edge
+		local DRAG_THRESHOLD = 4                  -- px of movement before it counts as a drag
+		local BR_SIZE, BR_THICK = 16, 2           -- bracket size / line thickness
+		local BR_HELD, BR_IDLE = 8, 18            -- bracket distance from window when held / when fading out
+		local ACC = Color3.fromRGB(235, 60, 60)
+		local Screen = GUI["1"]
+
+		local DragOffset = Vector2.new(Frame.Position.X.Offset, Frame.Position.Y.Offset)
+		local DragTarget = DragOffset
+		local DragVel = Vector2.zero
+		local Held = false
+		local BracketGap, BracketVel = BR_IDLE, 0
+		local DragConn
+
+		-- snap guide lines (full-screen, drawn behind the window)
+		local function MakeGuide(vertical)
+			local g = Instance.new("Frame", Screen)
+			g.Name = vertical and "SnapGuideX" or "SnapGuideY"
+			g.BorderSizePixel = 0
+			g.BackgroundColor3 = ACC
+			g.BackgroundTransparency = 1
+			g.ZIndex = 0
+			g.Active = false
+			g.Size = vertical and UDim2.new(0, 1, 1, 0) or UDim2.new(1, 0, 0, 1)
+			return g
+		end
+		local GuideX, GuideY = MakeGuide(true), MakeGuide(false)
+		local GuideShownX, GuideShownY = false, false
+
+		local function ShowGuide(g, show, current)
+			if show == current then return current end
+			TweenService:Create(g, TweenInfo.new(0.12), { BackgroundTransparency = show and 0.35 or 1 }):Play()
+			return show
+		end
+
+		-- corner brackets
+		local Brackets = {}
+		for i = 1, 4 do
+			local right, bottom = (i == 2 or i == 4), (i == 3 or i == 4)
+			local holder = Instance.new("Frame", Screen)
+			holder.Name = "DragBracket"
+			holder.BackgroundTransparency = 1
+			holder.Size = UDim2.fromOffset(BR_SIZE, BR_SIZE)
+			holder.ZIndex = 2
+			holder.Active = false
+
+			local hBar = Instance.new("Frame", holder)
+			hBar.BorderSizePixel = 0
+			hBar.BackgroundColor3 = ACC
+			hBar.BackgroundTransparency = 1
+			hBar.ZIndex = 2
+			hBar.Size = UDim2.fromOffset(BR_SIZE, BR_THICK)
+			hBar.Position = UDim2.new(0, 0, bottom and 1 or 0, bottom and -BR_THICK or 0)
+
+			local vBar = Instance.new("Frame", holder)
+			vBar.BorderSizePixel = 0
+			vBar.BackgroundColor3 = ACC
+			vBar.BackgroundTransparency = 1
+			vBar.ZIndex = 2
+			vBar.Size = UDim2.fromOffset(BR_THICK, BR_SIZE)
+			vBar.Position = UDim2.new(right and 1 or 0, right and -BR_THICK or 0, 0, 0)
+
+			Brackets[i] = { holder = holder, right = right, bottom = bottom, bars = { hBar, vBar } }
+		end
+
+		local function FadeBrackets(show)
+			for _, br in ipairs(Brackets) do
+				for _, bar in ipairs(br.bars) do
+					TweenService:Create(bar, TweenInfo.new(show and 0.15 or 0.3), { BackgroundTransparency = show and 0 or 1 }):Play()
+				end
+			end
+		end
+
+		-- scan line that sweeps down the window on drop
+		local Scan = Instance.new("Frame", Frame)
+		Scan.Name = "DropScan"
+		Scan.BorderSizePixel = 0
+		Scan.BackgroundColor3 = ACC
+		Scan.BackgroundTransparency = 1
+		Scan.Size = UDim2.new(1, -24, 0, 2)
+		Scan.Position = UDim2.new(0, 12, 0, 0)
+		Scan.ZIndex = 45
+		Scan.Active = false
+
+		local function PlayScan()
+			Scan.Position = UDim2.new(0, 12, 0, 0)
+			Scan.BackgroundTransparency = 0.1
+			TweenService:Create(Scan, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+				Position = UDim2.new(0, 12, 1, -2),
+				BackgroundTransparency = 1,
+			}):Play()
+		end
+
+		-- on-screen bounds of the window (includes the left panel that sticks out)
+		local function Bounds(offset)
+			local scale = GUI["4"] and GUI["4"].Scale or 1
+			local ps = Screen.AbsoluteSize
+			local p = Frame.Position
+			local cx = p.X.Scale * ps.X + offset.X
+			local cy = p.Y.Scale * ps.Y + offset.Y
+			local w, h = Frame.Size.X.Offset * scale, Frame.Size.Y.Offset * scale
+			return cx - w / 2 - 27 * scale, cy - h / 2, cx + w / 2, cy + h / 2
+		end
+
+		-- nearest snap spot: screen edge (with margin) or centre
+		local function FindSnap(offset)
+			local ps = Screen.AbsoluteSize
+			local l, t, r, b = Bounds(offset)
+			local function pick(lo, size, total)
+				local spots = { SNAP_MARGIN, (total - size) / 2, total - size - SNAP_MARGIN }
+				local best, bestD = nil, SNAP_DIST
+				for i, s in ipairs(spots) do
+					local d = math.abs(lo - s)
+					if d < bestD then best, bestD = i, d end
+				end
+				if best then return best, spots[best] - lo end
+				return nil, 0
+			end
+			local ix, dx = pick(l, r - l, ps.X)
+			local iy, dy = pick(t, b - t, ps.Y)
+			return ix, dx, iy, dy
+		end
+
+		local function GuideLine(i, total)
+			if i == 1 then return SNAP_MARGIN end
+			if i == 2 then return total / 2 end
+			return total - SNAP_MARGIN
+		end
+
+		local function StopDragAnim()
+			if DragConn then DragConn:Disconnect(); DragConn = nil end
+			GuideShownX = ShowGuide(GuideX, false, GuideShownX)
+			GuideShownY = ShowGuide(GuideY, false, GuideShownY)
+		end
+
+		local function StartDragAnim()
+			if DragConn then return end
+			local acc = 0
+			DragConn = RunService.RenderStepped:Connect(function(dt)
+				-- resize grip took over: hand position control to it
+				if GUI.Resizing then
+					DragOffset = Vector2.new(Frame.Position.X.Offset, Frame.Position.Y.Offset)
+					DragTarget, DragVel = DragOffset, Vector2.zero
+					Held = false
+					FadeBrackets(false)
+					StopDragAnim()
+					return
+				end
+
+				acc = math.min(acc + dt, 0.1)
+				while acc >= 1 / 60 do
+					acc -= 1 / 60
+					DragVel = (DragVel + (DragTarget - DragOffset) * FOLLOW_K) * FOLLOW_DAMP
+					DragOffset += DragVel
+					BracketVel = (BracketVel + ((Held and BR_HELD or BR_IDLE) - BracketGap) * 0.22) * 0.62
+					BracketGap += BracketVel
+				end
+
+				local p = Frame.Position
+				Frame.Position = UDim2.new(p.X.Scale, DragOffset.X, p.Y.Scale, DragOffset.Y)
+
+				local l, t, r, b = Bounds(DragOffset)
+				for _, br in ipairs(Brackets) do
+					local x = br.right and (r + BracketGap - BR_SIZE) or (l - BracketGap)
+					local y = br.bottom and (b + BracketGap - BR_SIZE) or (t - BracketGap)
+					br.holder.Position = UDim2.fromOffset(x, y)
+				end
+
+				if Held then
+					local ps = Screen.AbsoluteSize
+					local ix, _, iy = FindSnap(DragTarget)
+					if ix then GuideX.Position = UDim2.fromOffset(GuideLine(ix, ps.X), 0) end
+					if iy then GuideY.Position = UDim2.fromOffset(0, GuideLine(iy, ps.Y)) end
+					GuideShownX = ShowGuide(GuideX, ix ~= nil, GuideShownX)
+					GuideShownY = ShowGuide(GuideY, iy ~= nil, GuideShownY)
+				elseif (DragTarget - DragOffset).Magnitude < 0.3 and DragVel.Magnitude < 0.3
+					and math.abs(BracketGap - BR_IDLE) < 0.5 then
+					DragOffset = DragTarget
+					Frame.Position = UDim2.new(p.X.Scale, DragOffset.X, p.Y.Scale, DragOffset.Y)
+					StopDragAnim()
+				end
+			end)
+		end
 
 		local function BeginDrag(input)
 			local g = GUI.ResizeGrip
@@ -2217,12 +2403,27 @@ function Library.new()
 				end
 			end
 			Dragging = true
-			DragStart = input.Position
-			StartPos = Frame.Position
+			DragStart = Vector2.new(input.Position.X, input.Position.Y)
+			if not DragConn then
+				DragOffset = Vector2.new(Frame.Position.X.Offset, Frame.Position.Y.Offset)
+				DragTarget, DragVel = DragOffset, Vector2.zero
+				BracketGap, BracketVel = BR_IDLE, 0
+			end
+			StartOffset = DragOffset
 		end
 
 		local function EndDrag()
+			if not Dragging then return end
 			Dragging = false
+			if not Held then return end -- was just a click, not a drag
+			Held = false
+			local _, dx, _, dy = FindSnap(DragTarget)
+			DragTarget += Vector2.new(dx, dy)
+			GuideShownX = ShowGuide(GuideX, false, GuideShownX)
+			GuideShownY = ShowGuide(GuideY, false, GuideShownY)
+			FadeBrackets(false)
+			task.delay(0.06, PlayScan)
+			StartDragAnim()
 		end
 
 		Frame.InputBegan:Connect(function(input)
@@ -2232,7 +2433,8 @@ function Library.new()
 			end
 		end)
 
-		Frame.InputEnded:Connect(function(input)
+		-- global release, since soft follow can leave the cursor outside the window
+		UIS.InputEnded:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1
 				or input.UserInputType == Enum.UserInputType.Touch then
 				EndDrag()
@@ -2240,18 +2442,18 @@ function Library.new()
 		end)
 
 		UIS.InputChanged:Connect(function(input)
-			if Dragging and not GUI.Resizing and (input.UserInputType == Enum.UserInputType.MouseMovement
-				or input.UserInputType == Enum.UserInputType.Touch) then
+			if not Dragging or GUI.Resizing then return end
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement
+				and input.UserInputType ~= Enum.UserInputType.Touch then return end
 
-				local delta = input.Position - DragStart
-
-				Frame.Position = UDim2.new(
-					StartPos.X.Scale,
-					StartPos.X.Offset + delta.X,
-					StartPos.Y.Scale,
-					StartPos.Y.Offset + delta.Y
-				)
+			local delta = Vector2.new(input.Position.X, input.Position.Y) - DragStart
+			if not Held then
+				if delta.Magnitude < DRAG_THRESHOLD then return end
+				Held = true
+				FadeBrackets(true)
+				StartDragAnim()
 			end
+			DragTarget = StartOffset + delta
 		end)
 
 		--[[
