@@ -3515,7 +3515,8 @@ function Library:ApplyTransparency()
 	Library._transS = s
 
 	main.BackgroundTransparency = s
-	if GUI["5"] then GUI["5"].BackgroundTransparency = 0.45 + (1 - 0.45) * s end
+	local panelBase = Library._mediaShown and 0.85 or 0.45
+	if GUI["5"] then GUI["5"].BackgroundTransparency = panelBase + (1 - panelBase) * s end
 
 	for _, v in ipairs(main:GetDescendants()) do
 		if not TransSkipped(v, main) then pcall(TransApply, v, s) end
@@ -3579,30 +3580,112 @@ function Library:ApplyCustomVisuals()
 	img.ImageTransparency = C.ImageTransparency
 	vid.Tint.BackgroundColor3 = C.Background
 	vid.Tint.BackgroundTransparency = 1 - C.ImageTransparency
+
+	-- same background behind the sidebar (it sticks out past the window, so it gets its own aligned copy)
+	local pb = main:FindFirstChild("PanelBackground")
+	if not pb then
+		pb = Instance.new("CanvasGroup")
+		pb.Name = "PanelBackground"
+		pb.BackgroundTransparency = 1
+		pb.BorderSizePixel = 0
+		pb.ZIndex = 0
+		pb.Visible = false
+		pb:SetAttribute("NoTheme", true)
+		Instance.new("UICorner", pb).CornerRadius = UDim.new(0, 14)
+
+		local pImg = Instance.new("ImageLabel", pb)
+		pImg.Name = "Img"
+		pImg.BackgroundTransparency = 1
+		pImg.BorderSizePixel = 0
+		pImg.ScaleType = Enum.ScaleType.Crop
+
+		local pVid = Instance.new("VideoFrame", pb)
+		pVid.Name = "Vid"
+		pVid.BackgroundTransparency = 1
+		pVid.BorderSizePixel = 0
+		pVid.Looped = true
+		pVid.Volume = 0
+		local pTint = Instance.new("Frame", pVid)
+		pTint.Name = "Tint"
+		pTint.BorderSizePixel = 0
+		pTint.Size = UDim2.fromScale(1, 1)
+
+		pb.Parent = main
+
+		local function sync()
+			local panel = GUI["5"]
+			if not panel or not pb.Parent then return end
+			pb.Position, pb.Size = panel.Position, panel.Size
+			local W, H = main.Size.X.Offset, main.Size.Y.Offset
+			local px = panel.Position.X.Scale * W + panel.Position.X.Offset
+			local py = panel.Position.Y.Scale * H + panel.Position.Y.Offset
+			for _, c in ipairs({ pImg, pVid }) do
+				c.Size = UDim2.fromOffset(W, H)
+				c.Position = UDim2.fromOffset(-px, -py)
+			end
+		end
+		sync()
+		main:GetPropertyChangedSignal("Size"):Connect(sync)
+		if GUI["5"] then
+			GUI["5"]:GetPropertyChangedSignal("Position"):Connect(sync)
+			GUI["5"]:GetPropertyChangedSignal("Size"):Connect(sync)
+		end
+	end
+	pb.Img.ImageTransparency = C.ImageTransparency
+	pb.Vid.Tint.BackgroundColor3 = C.Background
+	pb.Vid.Tint.BackgroundTransparency = 1 - C.ImageTransparency
 	Library:UpdateCustomSections()
 
 	Library._imgToken = (Library._imgToken or 0) + 1
 	local token = Library._imgToken
+	local function setPanelMedia(on)
+		Library._mediaShown = on
+		if GUI["5"] then
+			local s = Library._transS or 0
+			local base = on and 0.85 or 0.45
+			GUI["5"].BackgroundTransparency = base + (1 - base) * s
+		end
+	end
+
 	local function hideAll()
 		img.Visible = false
 		pcall(function() vid.Playing = false end)
 		vid.Visible = false
+		pb.Visible = false
+		pcall(function() pb.Vid.Playing = false end)
+		setPanelMedia(false)
+	end
+
+	local function showMedia(asset, isVideo)
+		if isVideo then
+			img.Visible = false
+			if vid.Video ~= asset then vid.Video = asset end
+			vid.Visible = true
+			pcall(function() vid.Playing = true end)
+			pb.Img.Visible = false
+			if pb.Vid.Video ~= asset then pb.Vid.Video = asset end
+			pb.Vid.Visible = true
+			pcall(function() pb.Vid.Playing = true end)
+		else
+			pcall(function() vid.Playing = false end)
+			vid.Visible = false
+			img.Image = asset
+			img.Visible = true
+			pcall(function() pb.Vid.Playing = false end)
+			pb.Vid.Visible = false
+			pb.Img.Image = asset
+			pb.Img.Visible = true
+		end
+		pb.Visible = true
+		setPanelMedia(true)
 	end
 
 	if custom and C.ImageEnabled and C.Image ~= "" then
 		task.spawn(function()
 			local asset, why, isVideo = Library:ResolveImage(C.Image)
 			if token ~= Library._imgToken then return end
-			if asset and isVideo then
-				img.Visible = false
-				if vid.Video ~= asset then vid.Video = asset end
-				vid.Visible = true
-				pcall(function() vid.Playing = true end)
-			elseif asset then
-				pcall(function() vid.Playing = false end)
-				vid.Visible = false
-				img.Image = asset
-				img.Visible = true
+			if asset then
+				showMedia(asset, isVideo)
 			else
 				hideAll()
 				Library:Notify("Custom Theme", why or "Couldn't load that file", 4)
