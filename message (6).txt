@@ -125,7 +125,17 @@ if not isfolder("Vananavan/Presets") then
 	makefolder("Vananavan/Presets")
 end
 
+local _SaveQueued = false
 function Library:save_flags()
+	if _SaveQueued then return end
+	_SaveQueued = true
+	task.delay(0.25, function()
+		_SaveQueued = false
+		Library._save_flags_now()
+	end)
+end
+
+function Library._save_flags_now()
 	local safe = {}
 	for k, v in pairs(Library.Flags) do
 		if typeof(v) == "Color3" then
@@ -3353,9 +3363,10 @@ function Library:ResolveImage(src)
 	if id then src = id end
 
 	Library._ImageCache = Library._ImageCache or {}
-	if Library._ImageCache[src] then return Library._ImageCache[src] end
+	local hit = Library._ImageCache[src]
+	if hit then return hit.asset, nil, hit.video end
 
-	local result, why
+	local result, why, video = nil, nil, false
 
 	if tonumber(src) then
 		result = "rbxassetid://" .. src
@@ -3376,7 +3387,10 @@ function Library:ResolveImage(src)
 		local h = 0
 		for i = 1, #src do h = (h * 31 + src:byte(i)) % 4294967296 end
 		local base = "Vananavan/bg_" .. h
-		local path = (isfile(base .. ".png") and (base .. ".png")) or (isfile(base .. ".jpg") and (base .. ".jpg")) or nil
+		local path
+		for _, e in ipairs({ ".png", ".jpg", ".webm", ".mp4" }) do
+			if isfile(base .. e) then path = base .. e break end
+		end
 
 		if not path then
 			local ok, data = pcall(game.HttpGet, game, src)
@@ -3395,22 +3409,31 @@ function Library:ResolveImage(src)
 
 			local ext
 			if data:sub(1, 4) == "\137PNG" then ext = ".png"
-			elseif data:sub(1, 2) == "\255\216" then ext = ".jpg" end
+			elseif data:sub(1, 2) == "\255\216" then ext = ".jpg"
+			elseif data:sub(1, 4) == "\26\69\223\163" then ext = ".webm"
+			elseif data:sub(5, 8) == "ftyp" then ext = ".mp4"
+			elseif data:sub(1, 4) == "GIF8" then
+				return nil, "GIFs can't animate in Roblox - convert it to .webm first"
+			end
 			if not ext then
-				return nil, "That link isn't a direct PNG/JPG image"
+				return nil, "That link isn't a direct PNG/JPG/WEBM file"
 			end
 
 			path = base .. ext
 			writefile(path, data)
 		end
 
+		video = (path:match("%.webm$") or path:match("%.mp4$")) ~= nil
 		local ok, asset = pcall(getAsset, path)
-		if ok and asset then result = asset else return nil, "Executor couldn't load the downloaded image" end
+		if ok and asset then result = asset else return nil, "Executor couldn't load the downloaded file" end
 
 	else
 		-- file from the executor workspace
 		local path = (src:gsub("\\", "/"))
 		path = path:gsub("^%./", "")
+		local fileExt = (path:match("%.(%w+)$") or ""):lower()
+		if fileExt == "gif" then return nil, "GIFs can't animate in Roblox - convert it to .webm first" end
+		video = fileExt == "webm" or fileExt == "mp4"
 		if typeof(isfile) ~= "function" or not isfile(path) then
 			return nil, "File not found: " .. path
 		end
@@ -3420,8 +3443,8 @@ function Library:ResolveImage(src)
 	end
 
 	if result then
-		Library._ImageCache[src] = result
-		return result
+		Library._ImageCache[src] = { asset = result, video = video }
+		return result, nil, video
 	end
 	return nil, why or "Couldn't load that image"
 end
@@ -3434,21 +3457,80 @@ function Library:UpdateCustomSections()
 	end
 end
 
+local TransOrig = setmetatable({}, { __mode = "k" })
+local TransWatched = false
+
+-- solid controls: only faded partly so they stay readable
+local TRANS_PARTIAL = {
+	DropdownButton = true, KeybindBadge = true, InputFrame = true,
+	search = true, LegitPvP_Button = true, Highlight = true,
+}
+-- never faded (accent pieces, knobs, slider tracks, the background media itself)
+local TRANS_SKIP = {
+	Fill = true, Knob = true, Slider = true, GripLine = true,
+	ResizeBadge = true, ResizeVeil = true, CustomBackground = true,
+	CustomVideo = true, indicator = true, Selector = true,
+}
+
+local function TransSkipped(inst, main)
+	local p = inst
+	while p and p ~= main do
+		if TRANS_SKIP[p.Name] or p:GetAttribute("NoTheme") or p:GetAttribute("fadeIsolated") then
+			return true
+		end
+		p = p.Parent
+	end
+	return p ~= main
+end
+
+local function TransApply(inst, s)
+	if inst == GUI["5"] then return end
+	if inst:IsA("GuiObject") then
+		local o = TransOrig[inst]
+		if o == nil then
+			o = inst.BackgroundTransparency
+			TransOrig[inst] = o
+		end
+		if o >= 1 then return end
+		local k = TRANS_PARTIAL[inst.Name] and 0.6 or 1
+		inst.BackgroundTransparency = o + (1 - o) * s * k
+	elseif inst.ClassName == "UIShadow" then
+		local o = TransOrig[inst]
+		if o == nil then
+			local ok, v = pcall(function() return inst.Transparency end)
+			o = ok and v or 0
+			TransOrig[inst] = o
+		end
+		pcall(function() inst.Transparency = o + (1 - o) * s end)
+	end
+end
+
 -- window, sidebar and cards are stacked, so the slider is split across the layers
--- (s * s = the transparency you actually see)
 function Library:ApplyTransparency()
 	local main = GUI["2"]
 	if not main then return end
 	local custom = Library.CurrentTheme == "Custom Theme"
 	local t = custom and Library.Custom.Transparency or 0
 	local s = math.sqrt(t)
+	Library._transS = s
 
 	main.BackgroundTransparency = s
 	if GUI["5"] then GUI["5"].BackgroundTransparency = 0.45 + (1 - 0.45) * s end
+
 	for _, v in ipairs(main:GetDescendants()) do
-		if v:IsA("Frame") and v.Name:match("_content$") and v.Name ~= "top_bar_content" then
-			v.BackgroundTransparency = s
-		end
+		if not TransSkipped(v, main) then pcall(TransApply, v, s) end
+	end
+
+	if not TransWatched then
+		TransWatched = true
+		main.DescendantAdded:Connect(function(v)
+			task.defer(function()
+				local cur = Library._transS or 0
+				if cur > 0 and v.Parent and not TransSkipped(v, main) then
+					pcall(TransApply, v, cur)
+				end
+			end)
+		end)
 	end
 end
 
@@ -3472,25 +3554,62 @@ function Library:ApplyCustomVisuals()
 		img:SetAttribute("NoTheme", true)
 		Instance.new("UICorner", img).CornerRadius = UDim.new(0, 20)
 	end
+
+	local vid = main:FindFirstChild("CustomVideo")
+	if not vid then
+		vid = Instance.new("VideoFrame")
+		vid.Name = "CustomVideo"
+		vid.BackgroundTransparency = 1
+		vid.BorderSizePixel = 0
+		vid.Size = UDim2.new(1, 0, 1, 0)
+		vid.ZIndex = 0
+		vid.Looped = true
+		vid.Volume = 0
+		vid.Visible = false
+		vid:SetAttribute("NoTheme", true)
+		Instance.new("UICorner", vid).CornerRadius = UDim.new(0, 20)
+		local tint = Instance.new("Frame", vid)
+		tint.Name = "Tint"
+		tint.BorderSizePixel = 0
+		tint.Size = UDim2.fromScale(1, 1)
+		Instance.new("UICorner", tint).CornerRadius = UDim.new(0, 20)
+		vid.Parent = main
+	end
+
 	img.ImageTransparency = C.ImageTransparency
+	vid.Tint.BackgroundColor3 = C.Background
+	vid.Tint.BackgroundTransparency = 1 - C.ImageTransparency
 	Library:UpdateCustomSections()
 
 	Library._imgToken = (Library._imgToken or 0) + 1
 	local token = Library._imgToken
+	local function hideAll()
+		img.Visible = false
+		pcall(function() vid.Playing = false end)
+		vid.Visible = false
+	end
+
 	if custom and C.ImageEnabled and C.Image ~= "" then
 		task.spawn(function()
-			local asset, why = Library:ResolveImage(C.Image)
+			local asset, why, isVideo = Library:ResolveImage(C.Image)
 			if token ~= Library._imgToken then return end
-			if asset then
+			if asset and isVideo then
+				img.Visible = false
+				if vid.Video ~= asset then vid.Video = asset end
+				vid.Visible = true
+				pcall(function() vid.Playing = true end)
+			elseif asset then
+				pcall(function() vid.Playing = false end)
+				vid.Visible = false
 				img.Image = asset
 				img.Visible = true
 			else
-				img.Visible = false
-				Library:Notify("Custom Theme", why or "Couldn't load that image", 4)
+				hideAll()
+				Library:Notify("Custom Theme", why or "Couldn't load that file", 4)
 			end
 		end)
 	else
-		img.Visible = false
+		hideAll()
 	end
 end
 
