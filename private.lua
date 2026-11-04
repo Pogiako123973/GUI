@@ -24,36 +24,21 @@ local function New(cl, pr, ch)
 	for k, v in next, pr or {} do
 		if k == "Parent" then p = v else o[k] = v end
 	end
-	for _, c in next, ch or {} do
-		c.Parent = o
-	end
+	for _, c in next, ch or {} do c.Parent = o end
 	if p then o.Parent = p end
 	return o
 end
 
-local function Crn(r)
-	return New("UICorner", {CornerRadius = UDim.new(0, r)})
-end
-
-local function Strk(c, th)
-	return New("UIStroke", {Color = c or T.Divide, Thickness = th or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual})
-end
-
-local function Twn(o, pr, tm)
-	TS:Create(o, TweenInfo.new(tm or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), pr):Play()
-end
-
-local function KN(k)
-	return k and k.Name or "None"
-end
+local function Crn(r) return New("UICorner", {CornerRadius = UDim.new(0, r)}) end
+local function Strk(c, th) return New("UIStroke", {Color = c or T.Divide, Thickness = th or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual}) end
+local function Twn(o, pr, tm) TS:Create(o, TweenInfo.new(tm or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), pr):Play() end
+local function KN(k) return k and k.Name or "None" end
 
 local function MakeDrag(ar, tg)
 	local dg, ds, sp
 	ar.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-			dg = true
-			ds = i.Position
-			sp = tg.Position
+			dg = true; ds = i.Position; sp = tg.Position
 		end
 	end)
 	UIS.InputChanged:Connect(function(i)
@@ -63,9 +48,7 @@ local function MakeDrag(ar, tg)
 		end
 	end)
 	UIS.InputEnded:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-			dg = false
-		end
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dg = false end
 	end)
 end
 
@@ -74,15 +57,14 @@ Lib.Theme = T
 Lib.Flags = {}
 
 local Win, Tab, Sec = {}, {}, {}
-Win.__index = Win
-Tab.__index = Tab
-Sec.__index = Sec
+Win.__index = Win; Tab.__index = Tab; Sec.__index = Sec
 
 function Lib:CreateWindow(cfg)
 	cfg = cfg or {}
 	local win = setmetatable({}, Win)
 	win.Title = cfg.Title or "Vlyte"
 	win.Subtitle = cfg.Subtitle or "Baseplate"
+	win.Mode = cfg.Mode or "Automation"
 	win.Tabs = {}
 	win.Elements = {}
 	win.KbEntries = {}
@@ -110,7 +92,7 @@ function Lib:CreateWindow(cfg)
 		BorderSizePixel = 0,
 		ClipsDescendants = true,
 		Parent = gui,
-	}, {Crn(15), Strk(T.Divide, 1)})
+	}, {Crn(15)})
 	win.Main = main
 
 	local side = New("Frame", {
@@ -118,9 +100,17 @@ function Lib:CreateWindow(cfg)
 		Size = UDim2.new(0, 210, 1, 0),
 		BackgroundColor3 = T.Side,
 		BorderSizePixel = 0,
+		ClipsDescendants = true,
 		Parent = main,
 	}, {Crn(15)})
-	win.Sidebar = side
+
+	New("Frame", {
+		Position = UDim2.new(1, -15, 0, 0),
+		Size = UDim2.new(0, 15, 1, 0),
+		BackgroundColor3 = T.Side,
+		BorderSizePixel = 0,
+		Parent = side,
+	})
 
 	local hdr = New("Frame", {
 		Name = "Header",
@@ -131,7 +121,7 @@ function Lib:CreateWindow(cfg)
 	MakeDrag(hdr, main)
 
 	New("ImageLabel", {
-		Position = UDim2.new(0, 15, 0, 13),
+		Position = UDim2.new(0, 15, 0, 12),
 		Size = UDim2.new(0, 26, 0, 26),
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://74643671263769",
@@ -139,12 +129,12 @@ function Lib:CreateWindow(cfg)
 	})
 
 	New("TextLabel", {
-		Position = UDim2.new(0, 51, 0, 13),
-		Size = UDim2.new(0, 140, 0, 26),
+		Position = UDim2.new(0, 51, 0, 15),
+		Size = UDim2.new(0, 144, 0, 26),
 		BackgroundTransparency = 1,
 		Text = win.Title,
 		Font = F,
-		TextSize = 20,
+		TextSize = 21,
 		TextColor3 = T.Txt,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = hdr,
@@ -159,8 +149,7 @@ function Lib:CreateWindow(cfg)
 	})
 
 	New("ImageLabel", {
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 15, 0.5, 0),
+		Position = UDim2.new(0, 15, 0, 8),
 		Size = UDim2.new(0, 14, 0, 14),
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://10734943674",
@@ -209,74 +198,113 @@ function Lib:CreateWindow(cfg)
 		Parent = main,
 	})
 
-	local tb = New("Frame", {
-		Name = "Topbar",
-		Size = UDim2.new(1, 0, 0, 90),
+	local minBtn = New("Frame", {
+		Position = UDim2.new(0, 15, 0, 15),
+		Size = UDim2.new(0, 35, 0, 35),
+		BackgroundColor3 = T.El,
+		BorderSizePixel = 0,
+		Parent = ct,
+	}, {Crn(8)})
+
+	New("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0, 16, 0, 16),
 		BackgroundTransparency = 1,
+		Image = "rbxassetid://99910508437174",
+		ImageColor3 = T.Sub,
+		Parent = minBtn,
+	})
+
+	local closeBtn = New("Frame", {
+		Position = UDim2.new(1, -50, 0, 15),
+		Size = UDim2.new(0, 35, 0, 35),
+		BackgroundColor3 = T.El,
+		BorderSizePixel = 0,
+		Parent = ct,
+	}, {Crn(8)})
+
+	New("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0, 16, 0, 16),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://10734950309",
+		ImageColor3 = T.Sub,
+		Parent = closeBtn,
+	})
+
+	local modeSel = New("Frame", {
+		Position = UDim2.new(0, 60, 0, 15),
+		Size = UDim2.new(0, 190, 0, 35),
+		BackgroundColor3 = T.El,
+		BorderSizePixel = 0,
+		Parent = ct,
+	}, {Crn(8)})
+
+	New("TextLabel", {
+		Position = UDim2.new(0, 14, 0, 0),
+		Size = UDim2.new(1, -46, 1, 0),
+		BackgroundTransparency = 1,
+		Text = win.Mode,
+		Font = F,
+		TextSize = 14,
+		TextColor3 = T.Sub,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = modeSel,
+	})
+
+	New("ImageLabel", {
+		Position = UDim2.new(1, -26, 0, 13),
+		Size = UDim2.new(0, 13, 0, 9),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://115907894584787",
+		ImageColor3 = T.Sub,
+		Parent = modeSel,
+	})
+
+	local crumbL = New("TextLabel", {
+		Position = UDim2.new(0, 15, 0, 60),
+		Size = UDim2.new(0, 240, 0, 18),
+		BackgroundTransparency = 1,
+		Text = "Blatant",
+		Font = F,
+		TextSize = 15,
+		TextColor3 = T.Txt,
+		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = ct,
 	})
 
-	local da = New("Frame", {
-		Name = "DragArea",
-		Size = UDim2.new(1, -150, 0, 70),
+	New("ImageLabel", {
+		Position = UDim2.new(0, 70, 0, 65),
+		Size = UDim2.new(0, 11, 0, 8),
 		BackgroundTransparency = 1,
-		Active = true,
-		Parent = tb,
+		Image = "rbxassetid://115907894584787",
+		ImageColor3 = T.Sub,
+		Rotation = 270,
+		Parent = ct,
 	})
-	MakeDrag(da, main)
 
-	local tt = New("TextLabel", {
-		Position = UDim2.new(0, 18, 0, 20),
-		Size = UDim2.new(1, -200, 0, 22),
+	local crumbR = New("TextLabel", {
+		Position = UDim2.new(0, 90, 0, 60),
+		Size = UDim2.new(0, 240, 0, 18),
 		BackgroundTransparency = 1,
-		Text = "",
+		Text = win.Mode,
 		Font = F,
-		TextSize = 18,
-		TextColor3 = T.Txt,
+		TextSize = 15,
+		TextColor3 = T.Sub,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = da,
+		Parent = ct,
 	})
-	win.TabTitle = tt
+	win.CrumbL = crumbL
+	win.CrumbR = crumbR
 
-	local function CtrlBtn(xo, im, cb)
-		local b = New("TextButton", {
-			Position = UDim2.new(1, xo, 0, 15),
-			Size = UDim2.new(0, 35, 0, 35),
-			BackgroundColor3 = T.El,
-			BorderSizePixel = 0,
-			Text = "",
-			AutoButtonColor = false,
-			Parent = tb,
-		}, {Crn(8)})
-
-		local ic = New("ImageLabel", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			Size = UDim2.new(0, 16, 0, 16),
-			BackgroundTransparency = 1,
-			Image = im,
-			ImageColor3 = T.Sub,
-			Parent = b,
-		})
-
-		b.MouseEnter:Connect(function()
-			Twn(b, {BackgroundColor3 = T.Divide})
-			Twn(ic, {ImageColor3 = T.Txt})
-		end)
-		b.MouseLeave:Connect(function()
-			Twn(b, {BackgroundColor3 = T.El})
-			Twn(ic, {ImageColor3 = T.Sub})
-		end)
-		b.MouseButton1Click:Connect(cb)
-		return b
-	end
-
-	CtrlBtn(-50, "rbxassetid://10734950309", function()
-		gui:Destroy()
-	end)
+	local minClicked = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = minBtn})
+	local closeClicked = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = closeBtn})
+	closeClicked.MouseButton1Click:Connect(function() gui:Destroy() end)
 
 	local mini = false
-	CtrlBtn(-90, "rbxassetid://99910508437174", function()
+	minClicked.MouseButton1Click:Connect(function()
 		mini = not mini
 		side.Visible = not mini
 		Twn(main, {Size = mini and UDim2.new(0, 800, 0, 90) or win.DefSize}, 0.25)
@@ -293,8 +321,7 @@ function Lib:CreateWindow(cfg)
 
 	local kp = New("Frame", {
 		Name = "Keybinds",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Position = UDim2.new(0, 15, 0.4, 0),
 		Size = UDim2.new(0, 360, 0, 354),
 		BackgroundColor3 = T.Bg,
 		BorderSizePixel = 0,
@@ -331,9 +358,7 @@ function Lib:CreateWindow(cfg)
 		Image = "rbxassetid://125910158111031",
 		Parent = kp,
 	})
-	kc.MouseButton1Click:Connect(function()
-		kp.Visible = false
-	end)
+	kc.MouseButton1Click:Connect(function() kp.Visible = false end)
 
 	New("Frame", {
 		Position = UDim2.new(0, 10, 0, 44),
@@ -377,9 +402,26 @@ function Lib:CreateWindow(cfg)
 	})
 	win.KbList = kl
 
-	CtrlBtn(-130, "rbxassetid://10723433811", function()
-		kp.Visible = not kp.Visible
-	end)
+	local kbBtn = New("Frame", {
+		Position = UDim2.new(1, -90, 0, 15),
+		Size = UDim2.new(0, 35, 0, 35),
+		BackgroundColor3 = T.El,
+		BorderSizePixel = 0,
+		Parent = ct,
+	}, {Crn(8)})
+
+	New("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0, 16, 0, 16),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://10723433811",
+		ImageColor3 = T.Sub,
+		Parent = kbBtn,
+	})
+
+	local kbClicked = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = kbBtn})
+	kbClicked.MouseButton1Click:Connect(function() kp.Visible = not kp.Visible end)
 
 	if cfg.Watermark ~= false then
 		local wm = New("Frame", {
@@ -411,14 +453,14 @@ function Lib:CreateWindow(cfg)
 			Parent = wm,
 		})
 
-		local function wmLb(tx, cl)
+		local function wmLb(tx, cl, sz)
 			return New("TextLabel", {
 				Size = UDim2.new(0, 0, 0, 16),
 				AutomaticSize = Enum.AutomaticSize.X,
 				BackgroundTransparency = 1,
 				Text = tx,
 				Font = F,
-				TextSize = 13,
+				TextSize = sz or 13,
 				TextColor3 = cl or T.Sub,
 				Parent = wm,
 			})
@@ -433,7 +475,7 @@ function Lib:CreateWindow(cfg)
 			})
 		end
 
-		wmLb(win.Title, T.Txt); wmSp()
+		wmLb(win.Title, T.Txt, 14); wmSp()
 		wmLb(win.Subtitle); wmSp()
 		local fl = wmLb("0 fps"); wmSp()
 		local pl = wmLb("0 ms"); wmSp()
@@ -446,14 +488,9 @@ function Lib:CreateWindow(cfg)
 			ck = ck + dt
 			if ck >= 0.5 then
 				fl.Text = math.floor(fr / ck + 0.5) .. " fps"
-				fr = 0
-				ck = 0
-				local ok, p = pcall(function()
-					return LocalP:GetNetworkPing() * 1000
-				end)
-				if ok and p then
-					pl.Text = math.floor(p + 0.5) .. " ms"
-				end
+				fr = 0; ck = 0
+				local ok, p = pcall(function() return LocalP:GetNetworkPing() * 1000 end)
+				if ok and p then pl.Text = math.floor(p + 0.5) .. " ms" end
 				tl.Text = os.date("%H:%M:%S")
 			end
 		end)
@@ -462,9 +499,7 @@ function Lib:CreateWindow(cfg)
 	UIS.InputBegan:Connect(function(i, pr)
 		if pr then return end
 		for _, en in ipairs(win.KbEntries) do
-			if i.KeyCode == en.Key then
-				en.Element:Set(not en.Element.Value)
-			end
+			if i.KeyCode == en.Key then en.Element:Set(not en.Element.Value) end
 		end
 	end)
 
@@ -495,7 +530,7 @@ function Win:SelectTab(tb)
 		Twn(t.Lb, {TextColor3 = ac and T.Txt or T.Sub})
 		Twn(t.Btn, {BackgroundTransparency = ac and 0 or 1})
 	end
-	self.TabTitle.Text = tb.Name
+	self.CrumbL.Text = tb.Name
 	self.ActiveTab = tb
 end
 
@@ -567,8 +602,7 @@ function Win:CreateTab(nm, ic)
 	})
 
 	local ind = New("Frame", {
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 0, 0.5, 0),
+		Position = UDim2.new(0, 0, 0, 7),
 		Size = UDim2.new(0, 3, 0, 17),
 		BackgroundColor3 = T.Acc,
 		BackgroundTransparency = 1,
@@ -577,8 +611,7 @@ function Win:CreateTab(nm, ic)
 	}, {Crn(4)})
 
 	local icl = New("ImageLabel", {
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 18, 0.5, 0),
+		Position = UDim2.new(0, 18, 0, 8),
 		Size = UDim2.new(0, 15, 0, 15),
 		BackgroundTransparency = 1,
 		Image = tb.Icon,
@@ -604,9 +637,7 @@ function Win:CreateTab(nm, ic)
 		Text = "",
 		Parent = b,
 	})
-	ck.MouseButton1Click:Connect(function()
-		self:SelectTab(tb)
-	end)
+	ck.MouseButton1Click:Connect(function() self:SelectTab(tb) end)
 
 	tb.Btn, tb.Ind, tb.IcL, tb.Lb = b, ind, icl, lb
 
@@ -631,22 +662,14 @@ function Win:CreateTab(nm, ic)
 			ScrollingDirection = Enum.ScrollingDirection.Y,
 			Parent = pg,
 		}, {
-			New("UIPadding", {
-				PaddingTop = UDim.new(0, 2),
-				PaddingBottom = UDim.new(0, 12),
-				PaddingLeft = UDim.new(0, 8),
-				PaddingRight = UDim.new(0, 8),
-			}),
-			New("UIListLayout", {Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder}),
+			New("UIListLayout", {Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder}),
 		})
 	end
 
 	tb.Cols = {mkCol(0), mkCol(295)}
 
 	self.Tabs[#self.Tabs + 1] = tb
-	if #self.Tabs == 1 then
-		self:SelectTab(tb)
-	end
+	if #self.Tabs == 1 then self:SelectTab(tb) end
 
 	return tb
 end
@@ -673,37 +696,34 @@ function Tab:CreateSection(nm, op)
 		BackgroundTransparency = 1,
 		LayoutOrder = #self.Sections + 1,
 		Parent = col,
-	}, {
-		New("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
 
 	New("TextLabel", {
-		Size = UDim2.new(1, 0, 0, 19),
+		Position = UDim2.new(0, 13, 0, 6),
+		Size = UDim2.new(1, -26, 0, 19),
 		BackgroundTransparency = 1,
 		Text = nm,
 		Font = F,
 		TextSize = 15,
 		TextColor3 = T.Sub,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		LayoutOrder = 1,
 		Parent = wr,
 	})
 
 	local cn = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.new(0, 11, 0, 31),
+		Size = UDim2.new(1, -22, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = T.Sec,
 		BorderSizePixel = 0,
-		LayoutOrder = 2,
 		Parent = wr,
 	}, {
 		Crn(10),
-		New("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6)}),
 		New("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
 
 	sc.Frame = wr
-	sc.Container = cn
+	sc.Card = cn
 	sc.LastRow = nil
 
 	self.Sections[#self.Sections + 1] = sc
@@ -711,18 +731,19 @@ function Tab:CreateSection(nm, op)
 end
 
 function Sec:AddRow(rw)
+	rw.LayoutOrder = #self.Rows + 1
+	rw.Parent = self.Card
+	self.Rows[#self.Rows + 1] = rw
+
 	if self.LastRow then
 		New("Frame", {
-			Position = UDim2.new(0, 15, 1, -1),
+			Position = UDim2.new(0, 15, 1, 0),
 			Size = UDim2.new(1, -30, 0, 1),
 			BackgroundColor3 = T.Divide,
 			BorderSizePixel = 0,
 			Parent = self.LastRow,
 		})
 	end
-	rw.LayoutOrder = #self.Rows + 1
-	rw.Parent = self.Container
-	self.Rows[#self.Rows + 1] = rw
 	self.LastRow = rw
 	return rw
 end
@@ -747,13 +768,12 @@ function Sec:CreateToggle(cfg)
 	})
 
 	local bx = New("Frame", {
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 15, 0.5, 0),
+		Position = UDim2.new(0, 15, 0, 10),
 		Size = UDim2.new(0, 17, 0, 17),
 		BackgroundColor3 = T.Off,
 		BorderSizePixel = 0,
 		Parent = rw,
-	}, {Crn(4)})
+	}, {Crn(3)})
 
 	local ch = New("ImageLabel", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -768,7 +788,7 @@ function Sec:CreateToggle(cfg)
 
 	local lb = New("TextLabel", {
 		Position = UDim2.new(0, 41, 0, 0),
-		Size = UDim2.new(1, -110, 1, 0),
+		Size = UDim2.new(1, -100, 1, 0),
 		BackgroundTransparency = 1,
 		Text = nm,
 		Font = F,
@@ -778,21 +798,24 @@ function Sec:CreateToggle(cfg)
 		Parent = rw,
 	})
 
-	local klb
-	if kb then
-		klb = New("TextLabel", {
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, -15, 0.5, 0),
-			Size = UDim2.new(0, 28, 0, 20),
-			BackgroundColor3 = T.El,
-			BorderSizePixel = 0,
-			Text = KN(kb),
-			Font = F,
-			TextSize = 12,
-			TextColor3 = T.Sub,
-			Parent = rw,
-		}, {Crn(4)})
-	end
+	local gear = New("ImageLabel", {
+		Position = UDim2.new(1, -29, 0, 11),
+		Size = UDim2.new(0, 15, 0, 15),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://10734950309",
+		ImageColor3 = T.Sub,
+		Parent = rw,
+	})
+
+	local exp = New("ImageLabel", {
+		Position = UDim2.new(1, -49, 0, 14),
+		Size = UDim2.new(0, 13, 0, 9),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://115907894584787",
+		ImageColor3 = T.Sub,
+		Rotation = 270,
+		Parent = rw,
+	})
 
 	local bt = New("TextButton", {
 		Size = UDim2.new(1, 0, 1, 0),
@@ -816,25 +839,16 @@ function Sec:CreateToggle(cfg)
 		Twn(bx, {BackgroundColor3 = v and T.Acc or T.Off})
 		Twn(ch, {ImageTransparency = v and 0 or 1})
 		Twn(lb, {TextColor3 = v and T.Txt or T.Sub})
-		if klb then
-			Twn(klb, {TextColor3 = v and T.Acc or T.Sub})
-		end
-		if not sl then
-			cb(v)
-		end
+		if not sl then cb(v) end
 	end
 
-	bt.MouseButton1Click:Connect(function()
-		el:Set(not el.Value)
-	end)
+	bt.MouseButton1Click:Connect(function() el:Set(not el.Value) end)
 
 	el:Set(vl, true)
 	self:AddRow(rw)
 	self:_AddEl(el)
 
-	if kb then
-		self.Tab.Window:AddKeybind(el, kb)
-	end
+	if kb then self.Tab.Window:AddKeybind(el, kb) end
 
 	return el
 end
@@ -850,9 +864,8 @@ function Sec:CreateButton(cfg)
 	})
 
 	local b = New("TextButton", {
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 15, 0.5, 0),
-		Size = UDim2.new(1, -30, 0, 28),
+		Position = UDim2.new(0, 15, 0, 8),
+		Size = UDim2.new(1, -30, 0, 27),
 		BackgroundColor3 = T.El,
 		BorderSizePixel = 0,
 		Text = nm,
@@ -863,14 +876,8 @@ function Sec:CreateButton(cfg)
 		Parent = rw,
 	}, {Crn(6)})
 
-	b.MouseEnter:Connect(function()
-		Twn(b, {BackgroundColor3 = T.Divide})
-		Twn(b, {TextColor3 = T.Txt})
-	end)
-	b.MouseLeave:Connect(function()
-		Twn(b, {BackgroundColor3 = T.El})
-		Twn(b, {TextColor3 = T.Sub})
-	end)
+	b.MouseEnter:Connect(function() Twn(b, {BackgroundColor3 = T.Divide, TextColor3 = T.Txt}) end)
+	b.MouseLeave:Connect(function() Twn(b, {BackgroundColor3 = T.El, TextColor3 = T.Sub}) end)
 	b.MouseButton1Click:Connect(cb)
 
 	self:AddRow(rw)
@@ -880,7 +887,7 @@ end
 
 function Sec:CreateLabel(tx)
 	local rw = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 30),
+		Size = UDim2.new(1, 0, 0, 34),
 		BackgroundTransparency = 1,
 	})
 
@@ -967,39 +974,23 @@ function Sec:CreateSlider(cfg)
 		Parent = tr,
 	}, {Crn(6)})
 
-	local el = {
-		Type = "Slider",
-		Name = nm,
-		Flag = fl,
-		Row = rw,
-		Value = vl,
-		Callback = cb,
-	}
+	local el = {Type = "Slider", Name = nm, Flag = fl, Row = rw, Value = vl, Callback = cb}
 
 	local function setV(v, sl)
 		v = math.clamp(v, mn, mx)
-		if st > 0 then
-			v = math.floor((v - mn) / st + 0.5) * st + mn
-		end
+		if st > 0 then v = math.floor((v - mn) / st + 0.5) * st + mn end
 		v = math.clamp(v, mn, mx)
 		v = tonumber(string.format("%.4f", v))
-
 		el.Value = v
 		Lib.Flags[fl] = v
-
 		local rl = (v - mn) / (mx - mn)
 		Twn(fi, {Size = UDim2.new(rl, 0, 1, 0)}, 0.08)
 		Twn(kn, {Position = UDim2.new(rl, 0, 0.5, 0)}, 0.08)
 		vlb.Text = tostring(v) .. sf
-
-		if not sl then
-			cb(v)
-		end
+		if not sl then cb(v) end
 	end
 
-	function el:Set(v, sl)
-		setV(v, sl)
-	end
+	function el:Set(v, sl) setV(v, sl) end
 
 	local dg = false
 	local function upd(i)
@@ -1009,19 +1000,14 @@ function Sec:CreateSlider(cfg)
 
 	tr.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-			dg = true
-			upd(i)
+			dg = true; upd(i)
 			local mv, en
 			mv = UIS.InputChanged:Connect(function(x)
-				if dg and (x.UserInputType == Enum.UserInputType.MouseMovement or x.UserInputType == Enum.UserInputType.Touch) then
-					upd(x)
-				end
+				if dg and (x.UserInputType == Enum.UserInputType.MouseMovement or x.UserInputType == Enum.UserInputType.Touch) then upd(x) end
 			end)
 			en = UIS.InputEnded:Connect(function(x)
 				if x.UserInputType == Enum.UserInputType.MouseButton1 or x.UserInputType == Enum.UserInputType.Touch then
-					dg = false
-					mv:Disconnect()
-					en:Disconnect()
+					dg = false; mv:Disconnect(); en:Disconnect()
 				end
 			end)
 		end
@@ -1080,14 +1066,7 @@ function Sec:CreateTextBox(cfg)
 		Parent = bx,
 	})
 
-	local el = {
-		Type = "TextBox",
-		Name = nm,
-		Flag = fl,
-		Row = rw,
-		Value = df,
-		Callback = cb,
-	}
+	local el = {Type = "TextBox", Name = nm, Flag = fl, Row = rw, Value = df, Callback = cb}
 
 	tb.FocusLost:Connect(function()
 		el.Value = tb.Text
@@ -1146,22 +1125,12 @@ function Sec:CreateDropdown(cfg)
 		Visible = false,
 		ClipsDescendants = true,
 		Parent = rw,
-	}, {
-		Crn(6),
-		New("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}),
-	})
+	}, {Crn(6), New("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder})})
 
 	local open = false
 	local opb = {}
 
-	local el = {
-		Type = "Dropdown",
-		Name = nm,
-		Flag = fl,
-		Row = rw,
-		Value = cu,
-		Callback = cb,
-	}
+	local el = {Type = "Dropdown", Name = nm, Flag = fl, Row = rw, Value = cu, Callback = cb}
 
 	local function setO(s)
 		open = s
@@ -1177,14 +1146,10 @@ function Sec:CreateDropdown(cfg)
 		for o, bt in pairs(opb) do
 			Twn(bt, {TextColor3 = (o == v) and T.Acc or T.Txt})
 		end
-		if not sl then
-			cb(v)
-		end
+		if not sl then cb(v) end
 	end
 
-	function el:Set(v, sl)
-		setV(v, sl)
-	end
+	function el:Set(v, sl) setV(v, sl) end
 
 	for i, o in ipairs(op) do
 		local ob = New("TextButton", {
@@ -1199,28 +1164,14 @@ function Sec:CreateDropdown(cfg)
 			LayoutOrder = i,
 			Parent = li,
 		})
-		ob.MouseEnter:Connect(function()
-			Twn(ob, {BackgroundTransparency = 0.85, BackgroundColor3 = T.Divide})
-		end)
-		ob.MouseLeave:Connect(function()
-			Twn(ob, {BackgroundTransparency = 1})
-		end)
-		ob.MouseButton1Click:Connect(function()
-			setV(o)
-			setO(false)
-		end)
+		ob.MouseEnter:Connect(function() Twn(ob, {BackgroundTransparency = 0.85, BackgroundColor3 = T.Divide}) end)
+		ob.MouseLeave:Connect(function() Twn(ob, {BackgroundTransparency = 1}) end)
+		ob.MouseButton1Click:Connect(function() setV(o); setO(false) end)
 		opb[o] = ob
 	end
 
-	local hd = New("TextButton", {
-		Size = UDim2.new(1, 0, 0, 34),
-		BackgroundTransparency = 1,
-		Text = "",
-		Parent = rw,
-	})
-	hd.MouseButton1Click:Connect(function()
-		setO(not open)
-	end)
+	local hd = New("TextButton", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Text = "", Parent = rw})
+	hd.MouseButton1Click:Connect(function() setO(not open) end)
 
 	setV(cu, true)
 	self:AddRow(rw)
