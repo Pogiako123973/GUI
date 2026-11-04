@@ -1,3 +1,5 @@
+print("[Vlyte] v1.3")
+
 local Plrs = game:GetService("Players")
 local TS = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
@@ -55,6 +57,7 @@ end
 local Lib = {}
 Lib.Theme = T
 Lib.Flags = {}
+Lib.Version = "1.3"
 
 local Win, Tab, Sec = {}, {}, {}
 Win.__index = Win; Tab.__index = Tab; Sec.__index = Sec
@@ -308,7 +311,6 @@ function Lib:CreateWindow(cfg)
 	})
 	win.Pages = pgs
 
-	-- keybind panel
 	local kp = New("Frame", {
 		Name = "Keybinds",
 		Position = UDim2.new(0, 15, 0.4, 0),
@@ -470,6 +472,7 @@ end
 function Win:AddKeybind(el, key)
 	local en = {Element = el, Key = key, Name = el.Name}
 	self.KbEntries[#self.KbEntries + 1] = en
+
 	local row = New("Frame", {
 		Size = UDim2.new(1, 0, 0, 30),
 		BackgroundTransparency = 1,
@@ -477,8 +480,9 @@ function Win:AddKeybind(el, key)
 		Parent = self.KbList,
 	})
 	New("TextLabel", {Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0, 100, 1, 0), BackgroundTransparency = 1, Text = en.Name, Font = F, TextSize = 14, TextColor3 = T.Txt, TextXAlignment = Enum.TextXAlignment.Left, Parent = row})
-	New("TextLabel", {Position = UDim2.new(0, 115, 0, 0), Size = UDim2.new(0, 90, 1, 0), BackgroundTransparency = 1, Text = KN(key), Font = F, TextSize = 14, TextColor3 = T.Txt, TextXAlignment = Enum.TextXAlignment.Center, Parent = row})
+	local hk = New("TextLabel", {Position = UDim2.new(0, 115, 0, 0), Size = UDim2.new(0, 90, 1, 0), BackgroundTransparency = 1, Text = KN(key), Font = F, TextSize = 14, TextColor3 = T.Txt, TextXAlignment = Enum.TextXAlignment.Center, Parent = row})
 	New("TextLabel", {Position = UDim2.new(0, 250, 0, 0), Size = UDim2.new(0, 65, 1, 0), BackgroundTransparency = 1, Text = "Toggle", Font = F, TextSize = 14, TextColor3 = T.Acc, TextXAlignment = Enum.TextXAlignment.Center, Parent = row})
+	en.HkLabel = hk
 	return en
 end
 
@@ -577,7 +581,6 @@ function Tab:CreateSection(nm, op)
 	sc.Rows = {}
 	sc.Elements = {}
 
-	-- wrapper uses UIListLayout — auto-size is guaranteed
 	local wr = New("Frame", {
 		Name = nm .. "Section",
 		Size = UDim2.new(1, 0, 0, 0),
@@ -617,7 +620,6 @@ function Tab:CreateSection(nm, op)
 	sc.Frame = wr
 	sc.Card = cn
 	sc.LastRow = nil
-
 	self.Sections[#self.Sections + 1] = sc
 	return sc
 end
@@ -653,10 +655,7 @@ function Sec:CreateToggle(cfg)
 	local cb = cfg.Callback or function() end
 	local kb = cfg.Keybind
 
-	local rw = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 37),
-		BackgroundTransparency = 1,
-	})
+	local rw = New("Frame", {Size = UDim2.new(1, 0, 0, 37), BackgroundTransparency = 1})
 	local bx = New("Frame", {
 		Position = UDim2.new(0, 15, 0, 10),
 		Size = UDim2.new(0, 17, 0, 17),
@@ -664,7 +663,7 @@ function Sec:CreateToggle(cfg)
 		BorderSizePixel = 0,
 		Parent = rw,
 	}, {Crn(3)})
-	local ch = New("ImageLabel", {
+	local chk = New("ImageLabel", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		Size = UDim2.new(0, 12, 0, 12),
@@ -709,13 +708,50 @@ function Sec:CreateToggle(cfg)
 		self.Value = v
 		Lib.Flags[fl] = v
 		Twn(bx, {BackgroundColor3 = v and T.Acc or T.Off})
-		Twn(ch, {ImageTransparency = v and 0 or 1})
+		Twn(chk, {ImageTransparency = v and 0 or 1})
 		Twn(lb, {TextColor3 = v and T.Txt or T.Sub})
 		if not sl then cb(v) end
 	end
 
+	-- IMPORTANT: create bt BEFORE klb so klb sits on top
 	local bt = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = rw})
 	bt.MouseButton1Click:Connect(function() el:Set(not el.Value) end)
+
+	if kb then
+		local klb = New("TextLabel", {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -15, 0.5, 0),
+			Size = UDim2.new(0, 30, 0, 20),
+			BackgroundColor3 = T.El,
+			BorderSizePixel = 0,
+			Text = kb.Name,
+			Font = F,
+			TextSize = 12,
+			TextColor3 = T.Sub,
+			Parent = rw,
+		}, {Crn(4)})
+		local kbClick = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = klb})
+		kbClick.MouseButton1Click:Connect(function()
+			klb.Text = "..."
+			Twn(klb, {TextColor3 = T.Acc})
+			local conn
+			conn = UIS.InputBegan:Connect(function(i, pr)
+				if pr then return end
+				if i.UserInputType == Enum.UserInputType.Keyboard then
+					kb = i.KeyCode
+					klb.Text = kb.Name
+					Twn(klb, {TextColor3 = T.Sub})
+					for _, e in ipairs(self.Tab.Window.KbEntries) do
+						if e.Element == el then
+							e.Key = kb
+							if e.HkLabel then e.HkLabel.Text = kb.Name end
+						end
+					end
+					conn:Disconnect()
+				end
+			end)
+		end)
+	end
 
 	el:Set(vl, true)
 	self:AddRow(rw)
