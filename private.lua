@@ -21,10 +21,10 @@ local F = Enum.Font.Gotham
 local function New(cl, pr, ch)
 	local o = Instance.new(cl)
 	local p
-	for k, v in next, pr or {} do
+	for k, v in pairs(pr or {}) do
 		if k == "Parent" then p = v else o[k] = v end
 	end
-	for _, c in next, ch or {} do c.Parent = o end
+	for _, c in ipairs(ch or {}) do c.Parent = o end
 	if p then o.Parent = p end
 	return o
 end
@@ -104,18 +104,11 @@ function Lib:CreateWindow(cfg)
 		Parent = main,
 	}, {Crn(15)})
 
-	New("Frame", {
-		Position = UDim2.new(1, -15, 0, 0),
-		Size = UDim2.new(0, 15, 1, 0),
-		BackgroundColor3 = T.Side,
-		BorderSizePixel = 0,
-		Parent = side,
-	})
-
 	local hdr = New("Frame", {
 		Name = "Header",
 		Size = UDim2.new(1, 0, 0, 52),
 		BackgroundTransparency = 1,
+		Active = true,
 		Parent = side,
 	})
 	MakeDrag(hdr, main)
@@ -198,6 +191,28 @@ function Lib:CreateWindow(cfg)
 		Parent = main,
 	})
 
+	local function IconBtn(x, im, cb)
+		local b = New("Frame", {
+			Position = UDim2.new(1, x, 0, 15),
+			Size = UDim2.new(0, 35, 0, 35),
+			BackgroundColor3 = T.El,
+			BorderSizePixel = 0,
+			Parent = ct,
+		}, {Crn(8)})
+		New("ImageLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Size = UDim2.new(0, 16, 0, 16),
+			BackgroundTransparency = 1,
+			Image = im,
+			ImageColor3 = T.Sub,
+			Parent = b,
+		})
+		local click = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = b})
+		click.MouseButton1Click:Connect(cb)
+		return b
+	end
+
 	local minBtn = New("Frame", {
 		Position = UDim2.new(0, 15, 0, 15),
 		Size = UDim2.new(0, 35, 0, 35),
@@ -205,7 +220,6 @@ function Lib:CreateWindow(cfg)
 		BorderSizePixel = 0,
 		Parent = ct,
 	}, {Crn(8)})
-
 	New("ImageLabel", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -215,24 +229,15 @@ function Lib:CreateWindow(cfg)
 		ImageColor3 = T.Sub,
 		Parent = minBtn,
 	})
+	local mini = false
+	local minClick = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = minBtn})
+	minClick.MouseButton1Click:Connect(function()
+		mini = not mini
+		side.Visible = not mini
+		Twn(main, {Size = mini and UDim2.new(0, 800, 0, 90) or win.DefSize}, 0.25)
+	end)
 
-	local closeBtn = New("Frame", {
-		Position = UDim2.new(1, -50, 0, 15),
-		Size = UDim2.new(0, 35, 0, 35),
-		BackgroundColor3 = T.El,
-		BorderSizePixel = 0,
-		Parent = ct,
-	}, {Crn(8)})
-
-	New("ImageLabel", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(0, 16, 0, 16),
-		BackgroundTransparency = 1,
-		Image = "rbxassetid://10734950309",
-		ImageColor3 = T.Sub,
-		Parent = closeBtn,
-	})
+	IconBtn(-50, "rbxassetid://10734950309", function() gui:Destroy() end)
 
 	local modeSel = New("Frame", {
 		Position = UDim2.new(0, 60, 0, 15),
@@ -241,7 +246,6 @@ function Lib:CreateWindow(cfg)
 		BorderSizePixel = 0,
 		Parent = ct,
 	}, {Crn(8)})
-
 	New("TextLabel", {
 		Position = UDim2.new(0, 14, 0, 0),
 		Size = UDim2.new(1, -46, 1, 0),
@@ -253,7 +257,6 @@ function Lib:CreateWindow(cfg)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = modeSel,
 	})
-
 	New("ImageLabel", {
 		Position = UDim2.new(1, -26, 0, 13),
 		Size = UDim2.new(0, 13, 0, 9),
@@ -274,7 +277,6 @@ function Lib:CreateWindow(cfg)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = ct,
 	})
-
 	New("ImageLabel", {
 		Position = UDim2.new(0, 70, 0, 65),
 		Size = UDim2.new(0, 11, 0, 8),
@@ -284,8 +286,7 @@ function Lib:CreateWindow(cfg)
 		Rotation = 270,
 		Parent = ct,
 	})
-
-	local crumbR = New("TextLabel", {
+	New("TextLabel", {
 		Position = UDim2.new(0, 90, 0, 60),
 		Size = UDim2.new(0, 240, 0, 18),
 		BackgroundTransparency = 1,
@@ -297,18 +298,6 @@ function Lib:CreateWindow(cfg)
 		Parent = ct,
 	})
 	win.CrumbL = crumbL
-	win.CrumbR = crumbR
-
-	local minClicked = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = minBtn})
-	local closeClicked = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = closeBtn})
-	closeClicked.MouseButton1Click:Connect(function() gui:Destroy() end)
-
-	local mini = false
-	minClicked.MouseButton1Click:Connect(function()
-		mini = not mini
-		side.Visible = not mini
-		Twn(main, {Size = mini and UDim2.new(0, 800, 0, 90) or win.DefSize}, 0.25)
-	end)
 
 	local pgs = New("Frame", {
 		Name = "Pages",
@@ -319,6 +308,7 @@ function Lib:CreateWindow(cfg)
 	})
 	win.Pages = pgs
 
+	-- keybind panel
 	local kp = New("Frame", {
 		Name = "Keybinds",
 		Position = UDim2.new(0, 15, 0.4, 0),
@@ -329,7 +319,6 @@ function Lib:CreateWindow(cfg)
 		Parent = gui,
 	}, {Crn(10), Strk(T.Divide, 1)})
 	win.KbPanel = kp
-
 	New("ImageLabel", {
 		Position = UDim2.new(0, 13, 0, 13),
 		Size = UDim2.new(0, 18, 0, 18),
@@ -338,7 +327,6 @@ function Lib:CreateWindow(cfg)
 		ImageColor3 = T.Acc,
 		Parent = kp,
 	})
-
 	New("TextLabel", {
 		Position = UDim2.new(0, 39, 0, 11),
 		Size = UDim2.new(0, 220, 0, 22),
@@ -350,7 +338,6 @@ function Lib:CreateWindow(cfg)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = kp,
 	})
-
 	local kc = New("ImageButton", {
 		Position = UDim2.new(0, 330, 0, 13),
 		Size = UDim2.new(0, 18, 0, 18),
@@ -359,7 +346,6 @@ function Lib:CreateWindow(cfg)
 		Parent = kp,
 	})
 	kc.MouseButton1Click:Connect(function() kp.Visible = false end)
-
 	New("Frame", {
 		Position = UDim2.new(0, 10, 0, 44),
 		Size = UDim2.new(0, 340, 0, 1),
@@ -367,13 +353,7 @@ function Lib:CreateWindow(cfg)
 		BorderSizePixel = 0,
 		Parent = kp,
 	})
-
-	local hs = {
-		{10, 100, "Function", Enum.TextXAlignment.Left},
-		{115, 90, "Hotkey", Enum.TextXAlignment.Center},
-		{250, 65, "Status", Enum.TextXAlignment.Center},
-	}
-	for _, h in ipairs(hs) do
+	for _, h in ipairs({{10, 100, "Function", Enum.TextXAlignment.Left}, {115, 90, "Hotkey", Enum.TextXAlignment.Center}, {250, 65, "Status", Enum.TextXAlignment.Center}}) do
 		New("TextLabel", {
 			Position = UDim2.new(0, h[1], 0, 52),
 			Size = UDim2.new(0, h[2], 0, 24),
@@ -386,7 +366,6 @@ function Lib:CreateWindow(cfg)
 			Parent = kp,
 		})
 	end
-
 	local kl = New("ScrollingFrame", {
 		Position = UDim2.new(0, 0, 0, 80),
 		Size = UDim2.new(1, 0, 1, -80),
@@ -402,26 +381,7 @@ function Lib:CreateWindow(cfg)
 	})
 	win.KbList = kl
 
-	local kbBtn = New("Frame", {
-		Position = UDim2.new(1, -90, 0, 15),
-		Size = UDim2.new(0, 35, 0, 35),
-		BackgroundColor3 = T.El,
-		BorderSizePixel = 0,
-		Parent = ct,
-	}, {Crn(8)})
-
-	New("ImageLabel", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(0, 16, 0, 16),
-		BackgroundTransparency = 1,
-		Image = "rbxassetid://10723433811",
-		ImageColor3 = T.Sub,
-		Parent = kbBtn,
-	})
-
-	local kbClicked = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = kbBtn})
-	kbClicked.MouseButton1Click:Connect(function() kp.Visible = not kp.Visible end)
+	IconBtn(-90, "rbxassetid://10723433811", function() kp.Visible = not kp.Visible end)
 
 	if cfg.Watermark ~= false then
 		local wm = New("Frame", {
@@ -445,47 +405,21 @@ function Lib:CreateWindow(cfg)
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 		})
-
-		New("ImageLabel", {
-			Size = UDim2.new(0, 16, 0, 16),
-			BackgroundTransparency = 1,
-			Image = "rbxassetid://74643671263769",
-			Parent = wm,
-		})
-
-		local function wmLb(tx, cl, sz)
-			return New("TextLabel", {
-				Size = UDim2.new(0, 0, 0, 16),
-				AutomaticSize = Enum.AutomaticSize.X,
-				BackgroundTransparency = 1,
-				Text = tx,
-				Font = F,
-				TextSize = sz or 13,
-				TextColor3 = cl or T.Sub,
-				Parent = wm,
-			})
+		New("ImageLabel", {Size = UDim2.new(0, 16, 0, 16), BackgroundTransparency = 1, Image = "rbxassetid://74643671263769", Parent = wm})
+		local function lb(tx, cl, sz)
+			return New("TextLabel", {Size = UDim2.new(0, 0, 0, 16), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = tx, Font = F, TextSize = sz or 13, TextColor3 = cl or T.Sub, Parent = wm})
 		end
-
-		local function wmSp()
-			New("Frame", {
-				Size = UDim2.new(0, 1, 0, 14),
-				BackgroundColor3 = T.Divide,
-				BorderSizePixel = 0,
-				Parent = wm,
-			})
+		local function sp()
+			New("Frame", {Size = UDim2.new(0, 1, 0, 14), BackgroundColor3 = T.Divide, BorderSizePixel = 0, Parent = wm})
 		end
-
-		wmLb(win.Title, T.Txt, 14); wmSp()
-		wmLb(win.Subtitle); wmSp()
-		local fl = wmLb("0 fps"); wmSp()
-		local pl = wmLb("0 ms"); wmSp()
-		local tl = wmLb("00:00:00")
-
-		local fr = 0
-		local ck = 0
+		lb(win.Title, T.Txt, 14); sp()
+		lb(win.Subtitle); sp()
+		local fl = lb("0 fps"); sp()
+		local pl = lb("0 ms"); sp()
+		local tl = lb("00:00:00")
+		local fr, ck = 0, 0
 		RS.RenderStepped:Connect(function(dt)
-			fr = fr + 1
-			ck = ck + dt
+			fr = fr + 1; ck = ck + dt
 			if ck >= 0.5 then
 				fl.Text = math.floor(fr / ck + 0.5) .. " fps"
 				fr = 0; ck = 0
@@ -528,7 +462,6 @@ function Win:SelectTab(tb)
 		Twn(t.Ind, {BackgroundTransparency = ac and 0 or 1})
 		Twn(t.IcL, {ImageColor3 = ac and T.Txt or T.Sub})
 		Twn(t.Lb, {TextColor3 = ac and T.Txt or T.Sub})
-		Twn(t.Btn, {BackgroundTransparency = ac and 0 or 1})
 	end
 	self.CrumbL.Text = tb.Name
 	self.ActiveTab = tb
@@ -537,48 +470,15 @@ end
 function Win:AddKeybind(el, key)
 	local en = {Element = el, Key = key, Name = el.Name}
 	self.KbEntries[#self.KbEntries + 1] = en
-
 	local row = New("Frame", {
 		Size = UDim2.new(1, 0, 0, 30),
 		BackgroundTransparency = 1,
 		LayoutOrder = #self.KbEntries,
 		Parent = self.KbList,
 	})
-
-	New("TextLabel", {
-		Position = UDim2.new(0, 10, 0, 0),
-		Size = UDim2.new(0, 100, 1, 0),
-		BackgroundTransparency = 1,
-		Text = en.Name,
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Txt,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = row,
-	})
-	New("TextLabel", {
-		Position = UDim2.new(0, 115, 0, 0),
-		Size = UDim2.new(0, 90, 1, 0),
-		BackgroundTransparency = 1,
-		Text = KN(key),
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Txt,
-		TextXAlignment = Enum.TextXAlignment.Center,
-		Parent = row,
-	})
-	New("TextLabel", {
-		Position = UDim2.new(0, 250, 0, 0),
-		Size = UDim2.new(0, 65, 1, 0),
-		BackgroundTransparency = 1,
-		Text = "Toggle",
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Acc,
-		TextXAlignment = Enum.TextXAlignment.Center,
-		Parent = row,
-	})
-
+	New("TextLabel", {Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0, 100, 1, 0), BackgroundTransparency = 1, Text = en.Name, Font = F, TextSize = 14, TextColor3 = T.Txt, TextXAlignment = Enum.TextXAlignment.Left, Parent = row})
+	New("TextLabel", {Position = UDim2.new(0, 115, 0, 0), Size = UDim2.new(0, 90, 1, 0), BackgroundTransparency = 1, Text = KN(key), Font = F, TextSize = 14, TextColor3 = T.Txt, TextXAlignment = Enum.TextXAlignment.Center, Parent = row})
+	New("TextLabel", {Position = UDim2.new(0, 250, 0, 0), Size = UDim2.new(0, 65, 1, 0), BackgroundTransparency = 1, Text = "Toggle", Font = F, TextSize = 14, TextColor3 = T.Acc, TextXAlignment = Enum.TextXAlignment.Center, Parent = row})
 	return en
 end
 
@@ -600,7 +500,6 @@ function Win:CreateTab(nm, ic)
 		LayoutOrder = #self.Tabs + 1,
 		Parent = self.TabHolder,
 	})
-
 	local ind = New("Frame", {
 		Position = UDim2.new(0, 0, 0, 7),
 		Size = UDim2.new(0, 3, 0, 17),
@@ -609,7 +508,6 @@ function Win:CreateTab(nm, ic)
 		BorderSizePixel = 0,
 		Parent = b,
 	}, {Crn(4)})
-
 	local icl = New("ImageLabel", {
 		Position = UDim2.new(0, 18, 0, 8),
 		Size = UDim2.new(0, 15, 0, 15),
@@ -618,7 +516,6 @@ function Win:CreateTab(nm, ic)
 		ImageColor3 = T.Sub,
 		Parent = b,
 	})
-
 	local lb = New("TextLabel", {
 		Position = UDim2.new(0, 48, 0, 0),
 		Size = UDim2.new(1, -55, 1, 0),
@@ -630,15 +527,8 @@ function Win:CreateTab(nm, ic)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = b,
 	})
-
-	local ck = New("TextButton", {
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = "",
-		Parent = b,
-	})
+	local ck = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = b})
 	ck.MouseButton1Click:Connect(function() self:SelectTab(tb) end)
-
 	tb.Btn, tb.Ind, tb.IcL, tb.Lb = b, ind, icl, lb
 
 	local pg = New("Frame", {
@@ -665,12 +555,10 @@ function Win:CreateTab(nm, ic)
 			New("UIListLayout", {Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder}),
 		})
 	end
-
 	tb.Cols = {mkCol(0), mkCol(295)}
 
 	self.Tabs[#self.Tabs + 1] = tb
 	if #self.Tabs == 1 then self:SelectTab(tb) end
-
 	return tb
 end
 
@@ -689,6 +577,7 @@ function Tab:CreateSection(nm, op)
 	sc.Rows = {}
 	sc.Elements = {}
 
+	-- wrapper uses UIListLayout — auto-size is guaranteed
 	local wr = New("Frame", {
 		Name = nm .. "Section",
 		Size = UDim2.new(1, 0, 0, 0),
@@ -696,26 +585,29 @@ function Tab:CreateSection(nm, op)
 		BackgroundTransparency = 1,
 		LayoutOrder = #self.Sections + 1,
 		Parent = col,
+	}, {
+		New("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}),
+		New("UIPadding", {PaddingLeft = UDim.new(0, 11), PaddingRight = UDim.new(0, 11)}),
 	})
 
 	New("TextLabel", {
-		Position = UDim2.new(0, 13, 0, 6),
-		Size = UDim2.new(1, -26, 0, 19),
+		Size = UDim2.new(1, 0, 0, 19),
 		BackgroundTransparency = 1,
 		Text = nm,
 		Font = F,
 		TextSize = 15,
 		TextColor3 = T.Sub,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = 1,
 		Parent = wr,
-	})
+	}, {New("UIPadding", {PaddingLeft = UDim.new(0, 2)})})
 
 	local cn = New("Frame", {
-		Position = UDim2.new(0, 11, 0, 31),
-		Size = UDim2.new(1, -22, 0, 0),
+		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = T.Sec,
 		BorderSizePixel = 0,
+		LayoutOrder = 2,
 		Parent = wr,
 	}, {
 		Crn(10),
@@ -734,10 +626,9 @@ function Sec:AddRow(rw)
 	rw.LayoutOrder = #self.Rows + 1
 	rw.Parent = self.Card
 	self.Rows[#self.Rows + 1] = rw
-
 	if self.LastRow then
 		New("Frame", {
-			Position = UDim2.new(0, 15, 1, 0),
+			Position = UDim2.new(0, 15, 1, -1),
 			Size = UDim2.new(1, -30, 0, 1),
 			BackgroundColor3 = T.Divide,
 			BorderSizePixel = 0,
@@ -766,7 +657,6 @@ function Sec:CreateToggle(cfg)
 		Size = UDim2.new(1, 0, 0, 37),
 		BackgroundTransparency = 1,
 	})
-
 	local bx = New("Frame", {
 		Position = UDim2.new(0, 15, 0, 10),
 		Size = UDim2.new(0, 17, 0, 17),
@@ -774,7 +664,6 @@ function Sec:CreateToggle(cfg)
 		BorderSizePixel = 0,
 		Parent = rw,
 	}, {Crn(3)})
-
 	local ch = New("ImageLabel", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -785,7 +674,6 @@ function Sec:CreateToggle(cfg)
 		ImageTransparency = 1,
 		Parent = bx,
 	})
-
 	local lb = New("TextLabel", {
 		Position = UDim2.new(0, 41, 0, 0),
 		Size = UDim2.new(1, -100, 1, 0),
@@ -797,8 +685,7 @@ function Sec:CreateToggle(cfg)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = rw,
 	})
-
-	local gear = New("ImageLabel", {
+	New("ImageLabel", {
 		Position = UDim2.new(1, -29, 0, 11),
 		Size = UDim2.new(0, 15, 0, 15),
 		BackgroundTransparency = 1,
@@ -806,8 +693,7 @@ function Sec:CreateToggle(cfg)
 		ImageColor3 = T.Sub,
 		Parent = rw,
 	})
-
-	local exp = New("ImageLabel", {
+	New("ImageLabel", {
 		Position = UDim2.new(1, -49, 0, 14),
 		Size = UDim2.new(0, 13, 0, 9),
 		BackgroundTransparency = 1,
@@ -817,21 +703,7 @@ function Sec:CreateToggle(cfg)
 		Parent = rw,
 	})
 
-	local bt = New("TextButton", {
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = "",
-		Parent = rw,
-	})
-
-	local el = {
-		Type = "Toggle",
-		Name = nm,
-		Flag = fl,
-		Row = rw,
-		Value = vl,
-		Callback = cb,
-	}
+	local el = {Type = "Toggle", Name = nm, Flag = fl, Row = rw, Value = vl, Callback = cb}
 
 	function el:Set(v, sl)
 		self.Value = v
@@ -842,14 +714,13 @@ function Sec:CreateToggle(cfg)
 		if not sl then cb(v) end
 	end
 
+	local bt = New("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = rw})
 	bt.MouseButton1Click:Connect(function() el:Set(not el.Value) end)
 
 	el:Set(vl, true)
 	self:AddRow(rw)
 	self:_AddEl(el)
-
 	if kb then self.Tab.Window:AddKeybind(el, kb) end
-
 	return el
 end
 
@@ -857,12 +728,7 @@ function Sec:CreateButton(cfg)
 	cfg = cfg or {}
 	local nm = cfg.Name or "Button"
 	local cb = cfg.Callback or function() end
-
-	local rw = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 43),
-		BackgroundTransparency = 1,
-	})
-
+	local rw = New("Frame", {Size = UDim2.new(1, 0, 0, 43), BackgroundTransparency = 1})
 	local b = New("TextButton", {
 		Position = UDim2.new(0, 15, 0, 8),
 		Size = UDim2.new(1, -30, 0, 27),
@@ -875,22 +741,15 @@ function Sec:CreateButton(cfg)
 		AutoButtonColor = false,
 		Parent = rw,
 	}, {Crn(6)})
-
 	b.MouseEnter:Connect(function() Twn(b, {BackgroundColor3 = T.Divide, TextColor3 = T.Txt}) end)
 	b.MouseLeave:Connect(function() Twn(b, {BackgroundColor3 = T.El, TextColor3 = T.Sub}) end)
 	b.MouseButton1Click:Connect(cb)
-
 	self:AddRow(rw)
-	local el = {Type = "Button", Name = nm, Row = rw}
-	return self:_AddEl(el)
+	return self:_AddEl({Type = "Button", Name = nm, Row = rw})
 end
 
 function Sec:CreateLabel(tx)
-	local rw = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 34),
-		BackgroundTransparency = 1,
-	})
-
+	local rw = New("Frame", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1})
 	New("TextLabel", {
 		Position = UDim2.new(0, 15, 0, 0),
 		Size = UDim2.new(1, -30, 1, 0),
@@ -903,10 +762,8 @@ function Sec:CreateLabel(tx)
 		TextWrapped = true,
 		Parent = rw,
 	})
-
 	self:AddRow(rw)
-	local el = {Type = "Label", Name = tx or "", Row = rw}
-	return self:_AddEl(el)
+	return self:_AddEl({Type = "Label", Name = tx or "", Row = rw})
 end
 
 function Sec:CreateSlider(cfg)
@@ -920,67 +777,18 @@ function Sec:CreateSlider(cfg)
 	local sf = cfg.Suffix or ""
 	local cb = cfg.Callback or function() end
 
-	local rw = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 48),
-		BackgroundTransparency = 1,
-	})
-
-	New("TextLabel", {
-		Position = UDim2.new(0, 15, 0, 8),
-		Size = UDim2.new(1, -90, 0, 16),
-		BackgroundTransparency = 1,
-		Text = nm,
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Sub,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = rw,
-	})
-
-	local vlb = New("TextLabel", {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -15, 0, 8),
-		Size = UDim2.new(0, 70, 0, 16),
-		BackgroundTransparency = 1,
-		Text = tostring(vl) .. sf,
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Txt,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Parent = rw,
-	})
-
-	local tr = New("Frame", {
-		Position = UDim2.new(0, 15, 0, 31),
-		Size = UDim2.new(1, -30, 0, 5),
-		BackgroundColor3 = T.Off,
-		BorderSizePixel = 0,
-		Parent = rw,
-	}, {Crn(3)})
-
-	local fi = New("Frame", {
-		Size = UDim2.new(0, 0, 1, 0),
-		BackgroundColor3 = T.Acc,
-		BorderSizePixel = 0,
-		Parent = tr,
-	}, {Crn(3)})
-
-	local kn = New("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0, 0, 0.5, 0),
-		Size = UDim2.new(0, 12, 0, 12),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0,
-		Parent = tr,
-	}, {Crn(6)})
+	local rw = New("Frame", {Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1})
+	New("TextLabel", {Position = UDim2.new(0, 15, 0, 8), Size = UDim2.new(1, -90, 0, 16), BackgroundTransparency = 1, Text = nm, Font = F, TextSize = 14, TextColor3 = T.Sub, TextXAlignment = Enum.TextXAlignment.Left, Parent = rw})
+	local vlb = New("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -15, 0, 8), Size = UDim2.new(0, 70, 0, 16), BackgroundTransparency = 1, Text = tostring(vl) .. sf, Font = F, TextSize = 14, TextColor3 = T.Txt, TextXAlignment = Enum.TextXAlignment.Right, Parent = rw})
+	local tr = New("Frame", {Position = UDim2.new(0, 15, 0, 31), Size = UDim2.new(1, -30, 0, 5), BackgroundColor3 = T.Off, BorderSizePixel = 0, Parent = rw}, {Crn(3)})
+	local fi = New("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = T.Acc, BorderSizePixel = 0, Parent = tr}, {Crn(3)})
+	local kn = New("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Size = UDim2.new(0, 12, 0, 12), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = tr}, {Crn(6)})
 
 	local el = {Type = "Slider", Name = nm, Flag = fl, Row = rw, Value = vl, Callback = cb}
-
 	local function setV(v, sl)
 		v = math.clamp(v, mn, mx)
 		if st > 0 then v = math.floor((v - mn) / st + 0.5) * st + mn end
-		v = math.clamp(v, mn, mx)
-		v = tonumber(string.format("%.4f", v))
+		v = tonumber(string.format("%.4f", math.clamp(v, mn, mx)))
 		el.Value = v
 		Lib.Flags[fl] = v
 		local rl = (v - mn) / (mx - mn)
@@ -989,7 +797,6 @@ function Sec:CreateSlider(cfg)
 		vlb.Text = tostring(v) .. sf
 		if not sl then cb(v) end
 	end
-
 	function el:Set(v, sl) setV(v, sl) end
 
 	local dg = false
@@ -997,7 +804,6 @@ function Sec:CreateSlider(cfg)
 		local rl = math.clamp((i.Position.X - tr.AbsolutePosition.X) / tr.AbsoluteSize.X, 0, 1)
 		setV(mn + (mx - mn) * rl)
 	end
-
 	tr.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
 			dg = true; upd(i)
@@ -1015,8 +821,7 @@ function Sec:CreateSlider(cfg)
 
 	setV(vl, true)
 	self:AddRow(rw)
-	self:_AddEl(el)
-	return el
+	return self:_AddEl(el)
 end
 
 function Sec:CreateTextBox(cfg)
@@ -1026,31 +831,9 @@ function Sec:CreateTextBox(cfg)
 	local df = cfg.Default or ""
 	local cb = cfg.Callback or function() end
 
-	local rw = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 50),
-		BackgroundTransparency = 1,
-	})
-
-	New("TextLabel", {
-		Position = UDim2.new(0, 15, 0, 8),
-		Size = UDim2.new(1, -30, 0, 14),
-		BackgroundTransparency = 1,
-		Text = nm,
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Sub,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = rw,
-	})
-
-	local bx = New("Frame", {
-		Position = UDim2.new(0, 15, 0, 26),
-		Size = UDim2.new(1, -30, 0, 22),
-		BackgroundColor3 = T.El,
-		BorderSizePixel = 0,
-		Parent = rw,
-	}, {Crn(5)})
-
+	local rw = New("Frame", {Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1})
+	New("TextLabel", {Position = UDim2.new(0, 15, 0, 8), Size = UDim2.new(1, -30, 0, 14), BackgroundTransparency = 1, Text = nm, Font = F, TextSize = 14, TextColor3 = T.Sub, TextXAlignment = Enum.TextXAlignment.Left, Parent = rw})
+	local bx = New("Frame", {Position = UDim2.new(0, 15, 0, 26), Size = UDim2.new(1, -30, 0, 22), BackgroundColor3 = T.El, BorderSizePixel = 0, Parent = rw}, {Crn(5)})
 	local tb = New("TextBox", {
 		Position = UDim2.new(0, 8, 0, 0),
 		Size = UDim2.new(1, -16, 1, 0),
@@ -1065,18 +848,14 @@ function Sec:CreateTextBox(cfg)
 		ClearTextOnFocus = false,
 		Parent = bx,
 	})
-
 	local el = {Type = "TextBox", Name = nm, Flag = fl, Row = rw, Value = df, Callback = cb}
-
 	tb.FocusLost:Connect(function()
 		el.Value = tb.Text
 		Lib.Flags[fl] = tb.Text
 		cb(tb.Text)
 	end)
-
 	self:AddRow(rw)
-	self:_AddEl(el)
-	return el
+	return self:_AddEl(el)
 end
 
 function Sec:CreateDropdown(cfg)
@@ -1087,36 +866,9 @@ function Sec:CreateDropdown(cfg)
 	local cb = cfg.Callback or function() end
 	local cu = cfg.Default or (op[1] or "None")
 
-	local rw = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 34),
-		BackgroundTransparency = 1,
-	})
-
-	New("TextLabel", {
-		Position = UDim2.new(0, 15, 0, 0),
-		Size = UDim2.new(1, -130, 1, 0),
-		BackgroundTransparency = 1,
-		Text = nm,
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Sub,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = rw,
-	})
-
-	local vlb = New("TextLabel", {
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -15, 0.5, 0),
-		Size = UDim2.new(0, 110, 0, 16),
-		BackgroundTransparency = 1,
-		Text = tostring(cu),
-		Font = F,
-		TextSize = 14,
-		TextColor3 = T.Txt,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Parent = rw,
-	})
-
+	local rw = New("Frame", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1})
+	New("TextLabel", {Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(1, -130, 1, 0), BackgroundTransparency = 1, Text = nm, Font = F, TextSize = 14, TextColor3 = T.Sub, TextXAlignment = Enum.TextXAlignment.Left, Parent = rw})
+	local vlb = New("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 110, 0, 16), BackgroundTransparency = 1, Text = tostring(cu), Font = F, TextSize = 14, TextColor3 = T.Txt, TextXAlignment = Enum.TextXAlignment.Right, Parent = rw})
 	local li = New("Frame", {
 		Position = UDim2.new(0, 15, 0, 34),
 		Size = UDim2.new(1, -30, 0, 0),
@@ -1127,18 +879,14 @@ function Sec:CreateDropdown(cfg)
 		Parent = rw,
 	}, {Crn(6), New("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder})})
 
-	local open = false
 	local opb = {}
-
 	local el = {Type = "Dropdown", Name = nm, Flag = fl, Row = rw, Value = cu, Callback = cb}
 
 	local function setO(s)
-		open = s
 		li.Visible = s
 		li.Size = UDim2.new(1, -30, 0, s and #op * 26 or 0)
 		rw.Size = UDim2.new(1, 0, 0, 34 + (s and #op * 26 or 0))
 	end
-
 	local function setV(v, sl)
 		el.Value = v
 		Lib.Flags[fl] = v
@@ -1148,7 +896,6 @@ function Sec:CreateDropdown(cfg)
 		end
 		if not sl then cb(v) end
 	end
-
 	function el:Set(v, sl) setV(v, sl) end
 
 	for i, o in ipairs(op) do
@@ -1171,12 +918,13 @@ function Sec:CreateDropdown(cfg)
 	end
 
 	local hd = New("TextButton", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Text = "", Parent = rw})
-	hd.MouseButton1Click:Connect(function() setO(not open) end)
+	hd.MouseButton1Click:Connect(function()
+		setO(not li.Visible)
+	end)
 
 	setV(cu, true)
 	self:AddRow(rw)
-	self:_AddEl(el)
-	return el
+	return self:_AddEl(el)
 end
 
 return Lib
